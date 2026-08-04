@@ -29,7 +29,8 @@
     posterCanvas: $('posterCanvas'),
     saveBtn: $('saveBtn'),
     sharePosterBtn: $('sharePosterBtn'),
-    toast: $('toast')
+    toast: $('toast'),
+    rankList: $('rankList')
   };
 
   /* ===== 工具 ===== */
@@ -177,12 +178,13 @@
   document.querySelectorAll('.rate-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       var rating = btn.getAttribute('data-rating');
-      if (!state.recordId || state.rated) return;
+      if (state.rated) return;
       if (isDemo || !cloudApp) {
         state.rated = true;
         toast('演示模式：已评价 ' + rating);
         return;
       }
+      if (!state.recordId) return;
       cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'rate', recordId: state.recordId, rating: rating } })
         .then(function (res) {
           var r = res && res.result ? res.result : {};
@@ -373,5 +375,68 @@
     }
   });
 
+  /* ===== 红黑榜（数据库无数据/失败时回退演示数据） ===== */
+  var RANK_DEMO = [
+    { emoji: '🤯', dish: '可乐泡面布丁', comment: '吃完我的脑子开始唱RAP，医院的WiFi还不错。', rating: '已进医院' },
+    { emoji: '😋', dish: '酸奶炸鸡', comment: '本来以为是黑暗料理，结果吃出了米其林的错觉。', rating: '真香' },
+    { emoji: '🚑', dish: '老干妈西瓜汤', comment: '人生建议：西瓜和辣椒酱是前任关系，别复合。', rating: '已进医院' },
+    { emoji: '✨', dish: '香蕉咖喱炒饭', comment: '甜咸永动机，一碗下去直接通宵改论文。', rating: '真香' },
+    { emoji: '💀', dish: '抹茶螺蛳粉', comment: '颜色很治愈，味道很致郁。', rating: '已进医院' },
+    { emoji: '🔥', dish: '薯片煎蛋', comment: '脆脆的像在吃黄金，就是有点费下巴。', rating: '真香' }
+  ];
+
+  function loadRank() {
+    if (isDemo || !cloudApp) { renderRank(RANK_DEMO); return; }
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'listRank' } })
+      .then(function (res) {
+        var r = res && res.result ? res.result : {};
+        if (!r.success || !Array.isArray(r.data)) throw new Error((r && r.error) || '红黑榜加载失败');
+        var items = r.data.map(function (item) {
+          return {
+            emoji: item.rating === '已进医院' ? '🚑' : '😋',
+            dish: item.name || '未命名料理',
+            comment: item.warning || (item.ingredients ? '食材：' + item.ingredients : ''),
+            rating: item.rating || '待评价'
+          };
+        });
+        renderRank(items.length ? items : RANK_DEMO);
+      })
+      .catch(function (err) {
+        console.warn('listRank failed:', err);
+        renderRank(RANK_DEMO);
+      });
+  }
+
+  function renderRank(items) {
+    els.rankList.textContent = '';
+    items.forEach(function (item) {
+      var card = document.createElement('div');
+      card.className = 'rank-item';
+
+      var emoji = document.createElement('div');
+      emoji.className = 'rank-emoji';
+      emoji.textContent = item.emoji;
+
+      var dish = document.createElement('div');
+      dish.className = 'rank-dish';
+      dish.textContent = item.dish;
+
+      var comment = document.createElement('div');
+      comment.className = 'rank-comment';
+      comment.textContent = item.comment || '';
+
+      var tag = document.createElement('span');
+      tag.className = 'rank-tag ' + (item.rating === '已进医院' ? 'tag-bad' : 'tag-good');
+      tag.textContent = item.rating;
+
+      card.appendChild(emoji);
+      card.appendChild(dish);
+      card.appendChild(comment);
+      card.appendChild(tag);
+      els.rankList.appendChild(card);
+    });
+  }
+
   initCloud();
+  loadRank();
 })();

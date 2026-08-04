@@ -1,10 +1,11 @@
 // 云函数：generateRecipe
 // 功能：调用 CloudBase 托管大模型生成创意菜谱（严格 JSON 输出并校验），
-//       写入 recipes 集合；同时提供 rate（评价）动作。
+//       写入 recipes 集合；提供 rate（评价）与 listRank（红黑榜查询）动作。
 // 依赖：@cloudbase/node-sdk >= 3.16.0（云函数目录内 package.json 已声明）
 // 注意：部署后在云函数配置中把超时时间设置为 60~120 秒。
 
 const tcb = require('@cloudbase/node-sdk');
+const { fallbackRecipe, extractJson, normalizeRecipe } = require('./recipe');
 
 const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV });
 const ai = app.ai();
@@ -23,49 +24,6 @@ const SYSTEM_PROMPT =
   '"steps": ["步骤1（脱口秀语气）", "步骤2", "步骤3"],' +
   '"plating": "极其夸张或搞笑的摆盘建议",' +
   '"warning": "一句话提醒这道菜的风险或注意事项"}';
-
-// 兜底菜谱：AI 彻底失败时返回，保证前端不崩溃
-function fallbackRecipe() {
-  return {
-    name: '主厨的倔强炒饭',
-    steps: [
-      '把冰箱里所有食材切成丁，假装它们本来就是一个团队。',
-      '热锅凉油，倒入食材，翻炒到它们认命为止。',
-      '出锅前撒一把葱花，主打一个"尽力了"。'
-    ],
-    plating: '用一个平时不敢用的盘子，凹出米其林三星的自信。',
-    warning: '肠胃敏感者请酌情食用，厨房已尽力，后果自负。'
-  };
-}
-
-// 从模型输出中提取 JSON（兼容 markdown 代码块围栏 / 前后多余文字）
-function extractJson(text) {
-  if (!text || typeof text !== 'string') return null;
-  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/);
-  const candidate = fenced ? fenced[1] : text;
-  const start = candidate.indexOf('{');
-  const end = candidate.lastIndexOf('}');
-  if (start < 0 || end <= start) return null;
-  try {
-    return JSON.parse(candidate.slice(start, end + 1));
-  } catch (err) {
-    return null;
-  }
-}
-
-// 校验并规范化菜谱结构
-function normalizeRecipe(obj) {
-  if (!obj || typeof obj !== 'object') return null;
-  const name = typeof obj.name === 'string' ? obj.name.trim().slice(0, 20) : '';
-  const rawSteps = Array.isArray(obj.steps)
-    ? obj.steps.filter(function (s) { return typeof s === 'string' && s.trim(); })
-    : [];
-  const steps = rawSteps.map(function (s) { return s.trim(); }).slice(0, 6);
-  const plating = typeof obj.plating === 'string' ? obj.plating.trim() : '';
-  const warning = typeof obj.warning === 'string' ? obj.warning.trim() : '';
-  if (!name || !steps.length || !plating || !warning) return null;
-  return { name: name, steps: steps, plating: plating, warning: warning };
-}
 
 // 调用大模型生成，失败/非法时重试一次
 async function generate(ingredients) {
@@ -100,6 +58,25 @@ async function generate(ingredients) {
   return { recipe: recipe, fallback: false, lastError: lastError };
 }
 
+// 红黑榜：查询已评价的菜谱（真香 / 已进医院），按生成时间倒序取前 20 条
+async function listRank() {
+  const res = await db.collection('recipes')
+    .where({ user_rating: db.command.in(['真香', '已进医院']) })
+    .orderBy('create_time', 'desc')
+    .limit(20)
+    .get();
+
+  return (res.data || []).map(function (r) {
+    const rd = r.recipe_data || {};
+    return {
+      name: typeof rd.name === 'string' && rd.name ? rd.name : '未命名料理',
+      rating: typeof r.user_rating === 'string' ? r.user_rating : '',
+      warning: typeof rd.warning === 'string' ? rd.warning : '',
+      ingredients: typeof r.ingredients === 'string' ? r.ingredients : ''
+    };
+  });
+}
+
 exports.main = async (event) => {
   const action = event && event.action;
   try {
@@ -114,6 +91,12 @@ exports.main = async (event) => {
         data: { user_rating: rating, rate_time: db.serverDate() }
       });
       return { success: true, data: { recordId: recordId } };
+    }
+
+    // 动作：listRank（红黑榜查询）
+    if (action === 'listRank') {
+      const data = await listRank();
+      return { success: true, data: data };
     }
 
     // 默认动作：generate（生成菜谱）

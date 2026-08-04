@@ -181,3 +181,39 @@ html, body {
   border: 1px solid rgba(0,240,255,.4); z-index: 99;
   box-shadow: 0 0 20px rgba(0,240,255,.2);
 }
+
+
+/* 红黑榜 */
+.rank-section { margin-top: 48px; }
+.rank-title { font-size: 20px; font-weight: 800; color: #ffe600; text-shadow: 0 0 12px rgba(255, 230, 0, .4); }
+.rank-sub { margin-top: 4px; color: #5b6c8c; font-size: 13px; }
+.rank-scroll {
+  margin-top: 14px;
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+}
+.rank-item {
+  flex: 0 0 232px;
+  padding: 14px;
+  background: rgba(20, 28, 56, .75);
+  border: 2px solid rgba(0, 240, 255, .25);
+  border-radius: 14px;
+  scroll-snap-align: start;
+}
+.rank-emoji { font-size: 30px; }
+.rank-dish { margin-top: 8px; font-size: 16px; font-weight: 700; color: #00f0ff; }
+.rank-comment { margin-top: 6px; font-size: 13px; color: #9db1d4; min-height: 40px; }
+.rank-tag {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+.tag-good { background: rgba(0, 240, 160, .15); color: #00f0a0; border: 1px solid rgba(0, 240, 160, .5); }
+.tag-bad { background: rgba(255, 45, 120, .15); color: #ff2d78; border: 1px solid rgba(255, 45, 120, .5); }
