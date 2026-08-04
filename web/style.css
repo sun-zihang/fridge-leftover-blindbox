@@ -173,6 +173,16 @@ html, body {
 
 .footer { margin-top: 50px; text-align: center; color: #4a5a78; font-size: 12px; }
 
+.source-link {
+  display: inline-block;
+  margin-top: 8px;
+  color: #00f0ff;
+  text-decoration: none;
+  border-bottom: 1px dashed rgba(0, 240, 255, .5);
+  padding-bottom: 1px;
+}
+.source-link:hover { color: #ff2d78; border-bottom-color: rgba(255, 45, 120, .5); }
+
 /* Toast */
 .toast {
   position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%);
