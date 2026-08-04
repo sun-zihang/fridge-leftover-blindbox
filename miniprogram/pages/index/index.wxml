@@ -41,6 +41,9 @@
   <!-- 召唤主厨后的烹饪小剧场 -->
   <view class="pot-overlay" wx:if="{{generating}}">
     <view class="pot-scene">
+      <view class="glow"></view>
+      <view class="fire">🔥</view>
+      <view class="fly-emoji" wx:for="{{flyEmojis}}" wx:key="index" style="left:{{item.left}}rpx; animation-delay:{{item.delay}}ms; animation-duration:{{item.dur}}ms; font-size:{{item.size}}rpx;">{{item.emoji}}</view>
       <view class="pot">🍲</view>
       <view class="ing i1">🥔</view>
       <view class="ing i2">🌽</view>

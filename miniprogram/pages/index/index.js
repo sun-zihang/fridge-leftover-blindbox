@@ -1,5 +1,5 @@
 const { callFn } = require('../../utils/cloud');
-const { BADGES, LOADING_LINES } = require('../../utils/game');
+const { BADGES, buildLoadingLines, flyingEmojis } = require('../../utils/game');
 const app = getApp();
 
 Page({
@@ -17,7 +17,8 @@ Page({
     micOn: false,
     micText: '',
     generating: false,
-    potText: ''
+    potText: '',
+    flyEmojis: []
   },
 
   onLoad() {
@@ -27,8 +28,9 @@ Page({
   },
 
   // 烹饪文案轮播
-  startPotText() {
-    const queue = LOADING_LINES.slice().sort(() => Math.random() - 0.5);
+  startPotText(ingredientsText) {
+    const queue = buildLoadingLines(ingredientsText || '');
+    this.setData({ flyEmojis: flyingEmojis(ingredientsText || '') });
     let idx = 0;
     this.setData({ potText: queue[0] });
     if (this._potTimer) clearInterval(this._potTimer);
@@ -96,7 +98,7 @@ Page({
     const ingredients = this.data.ingredients.trim();
     if (!ingredients) { wx.showToast({ title: '先告诉我冰箱里有什么', icon: 'none' }); return; }
     this.setData({ generating: true });
-    this.startPotText();
+    this.startPotText(ingredients);
     callFn('generateRecipe', { action: 'generate', ingredients, style: this.data.styleId }).then((r) => {
       this.stopPotText();
       this.setData({ generating: false });

@@ -95,3 +95,37 @@ page { background: #0a0e1a; color: #e6f7ff; font-size: 15px; }
   100% { transform: translateY(-56rpx) scale(1.3); opacity: 0; }
 }
 .pot-text { margin-top: 30rpx; color: #8ea2c8; font-size: 15px; text-align: center; padding: 0 40rpx; min-height: 44rpx; }
+
+
+/* ===== 特效：火焰 / 光环 / 飞食材 ===== */
+.glow {
+  position: absolute; left: 50%; top: 50%;
+  width: 300rpx; height: 300rpx;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,230,0,.25), rgba(255,45,120,.08) 55%, transparent 70%);
+  animation: glowPulse 1.6s ease-in-out infinite;
+}
+@keyframes glowPulse { 0%,100% { opacity: .6; transform: translate(-50%,-50%) scale(1); } 50% { opacity: 1; transform: translate(-50%,-50%) scale(1.12); } }
+.fire {
+  position: absolute; bottom: -14rpx; left: 50%;
+  font-size: 56rpx; transform: translateX(-50%);
+  animation: fireFlicker .45s ease-in-out infinite;
+  z-index: 1;
+}
+@keyframes fireFlicker {
+  0%,100% { transform: translateX(-50%) scale(1) rotate(-3deg); opacity: .9; }
+  50% { transform: translateX(-50%) scale(1.15) rotate(3deg); opacity: 1; }
+}
+.fly-emoji {
+  position: absolute; bottom: 40rpx; z-index: 4;
+  animation: flyUp ease-in-out infinite;
+  opacity: 0;
+}
+@keyframes flyUp {
+  0% { transform: translateY(0) translateX(0) rotate(0deg) scale(.7); opacity: 0; }
+  15% { opacity: 1; }
+  50% { transform: translateY(-160rpx) translateX(24rpx) rotate(20deg) scale(1.1); }
+  85% { opacity: 1; }
+  100% { transform: translateY(-320rpx) translateX(-18rpx) rotate(-16deg) scale(.85); opacity: 0; }
+}
