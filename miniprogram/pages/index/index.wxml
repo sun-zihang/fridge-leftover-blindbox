@@ -29,7 +29,7 @@
   <!-- 风格选择 -->
   <view class="style-row">
     <text class="style-label">主厨风格</text>
-    <scroll-view scroll-x class="style-scroll" enable-flex>
+    <scroll-view scroll-x class="style-scroll">
       <view class="style-list">
         <view class="style-chip {{item.id === styleId ? 'selected' : ''}} {{item.unlocked ? '' : 'locked'}}" wx:for="{{styles}}" wx:key="id" data-id="{{item.id}}" bindtap="selectStyle">{{item.name}}{{item.unlocked ? '' : ' 🔒' + item.cost}}</view>
       </view>
@@ -42,10 +42,10 @@
   <view class="rank-section">
     <view class="rank-title">🏛️ 剩菜博物馆</view>
     <view class="rank-sub">全网最离谱菜谱大赏 · 按症状分类</view>
-    <scroll-view scroll-x class="rank-tabs" enable-flex>
+    <scroll-view scroll-x class="rank-tabs">
       <view class="rank-tab {{item === rankTag ? 'active' : ''}}" wx:for="{{rankTabs}}" wx:key="*this" data-tag="{{item}}" bindtap="onRankTab">{{item}}</view>
     </scroll-view>
-    <scroll-view scroll-x class="rank-scroll" enable-flex enhanced show-scrollbar="{{false}}">
+    <scroll-view scroll-x class="rank-scroll" enhanced show-scrollbar="{{false}}">
       <view class="rank-item" wx:for="{{rankData}}" wx:key="index" data-index="{{index}}" bindtap="onRankTap">
         <view class="rank-emoji">{{item.rating === '已进医院' ? '🚑' : '😋'}}</view>
         <view class="rank-dish">{{item.name}}</view>

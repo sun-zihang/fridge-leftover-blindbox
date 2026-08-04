@@ -1,0 +1,10 @@
+/* 全局样式：暗色主题 + 设备自适应基础 */
+page {
+  background: #0a0e1a;
+  color: #e6f7ff;
+  -webkit-user-select: none;
+  user-select: none;
+}
+view, text, button, scroll-view { box-sizing: border-box; }
+/* 去掉 button 默认边框 */
+button::after { border: none; }
