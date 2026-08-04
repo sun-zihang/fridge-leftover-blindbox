@@ -1,0 +1,35 @@
+page { background: #0a0e1a; color: #e6f7ff; }
+.page { padding: 24rpx; }
+.challenge-banner { display: flex; align-items: center; background: linear-gradient(135deg, rgba(255,45,120,.18), rgba(176,38,255,.18)); border: 2rpx solid rgba(255,45,120,.5); border-radius: 16rpx; padding: 16rpx; margin-bottom: 20rpx; }
+.banner-emoji { font-size: 36px; margin-right: 14rpx; }
+.banner-text { flex: 1; }
+.banner-title { display: block; color: #ff2d78; font-size: 16px; font-weight: 800; }
+.banner-sub { display: block; color: #dceaff; font-size: 13px; margin-top: 4rpx; }
+.accept-btn { background: linear-gradient(135deg,#ff2d78,#b026ff); color: #fff; font-weight: 800; }
+.dish-name { font-size: 46px; font-weight: 900; text-align: center; color: #ff2d78; text-shadow: 0 0 12px rgba(255,45,120,.9); letter-spacing: 2rpx; }
+.points-line { text-align: center; color: #ffe600; font-size: 14px; font-weight: 700; margin-top: 10rpx; }
+.dish-ingredients { text-align: center; color: #8ea2c8; font-size: 14px; margin-top: 8rpx; }
+.section-toggle { display: flex; justify-content: space-between; align-items: center; margin: 28rpx 0 14rpx; color: #00f0ff; font-size: 17px; font-weight: 700; border-bottom: 1rpx dashed rgba(0,240,255,.25); padding-bottom: 6rpx; }
+.chev { color: #8ea2c8; transition: transform .25s; }
+.chev.open { transform: rotate(180deg); }
+.step-card { margin-bottom: 12rpx; perspective: 900px; }
+.step-inner { position: relative; width: 100%; height: 120rpx; transition: transform .5s; transform-style: preserve-3d; }
+.step-inner.flipped { transform: rotateY(180deg); }
+.step-face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; border-radius: 14rpx; backface-visibility: hidden; background: rgba(20,28,56,.75); border: 2rpx solid rgba(0,240,255,.25); }
+.step-back { transform: rotateY(180deg); background: rgba(10,18,40,.95); border-color: rgba(255,45,120,.45); color: #dceaff; font-size: 14px; line-height: 1.7; padding: 10rpx; align-items: flex-start; }
+.step-num { width: 26px; height: 26px; border-radius: 8rpx; background: linear-gradient(135deg,#00f0ff,#b026ff); color: #0a0e1a; font-weight: 800; text-align: center; line-height: 26px; }
+.step-emoji { font-size: 30px; margin: 0 12rpx; }
+.step-flip-hint { font-size: 12px; color: #5b6c8c; }
+.flip-hint { text-align: center; color: #5b6c8c; font-size: 12px; margin-top: 6rpx; }
+.section-title { margin: 28rpx 0 14rpx; font-size: 17px; font-weight: 700; color: #00f0ff; }
+.plating { font-style: italic; color: #ffe600; font-size: 16px; padding: 14rpx; border-left: 4rpx solid #ffe600; background: rgba(255,230,0,.06); border-radius: 6rpx; }
+.warning { color: #ff4d4f; font-weight: 700; padding: 14rpx; border: 2rpx solid rgba(255,77,79,.6); border-radius: 10rpx; background: rgba(255,77,79,.1); }
+.rate-row { margin-top: 26rpx; display: flex; align-items: center; justify-content: center; }
+.rate-title { color: #8ea2c8; font-size: 14px; margin-right: 14rpx; }
+.rate-btn { border-radius: 999rpx; }
+.rate-btn.good { background: rgba(0,240,160,.15); color: #00f0a0; border: 1rpx solid rgba(0,240,160,.5); }
+.rate-btn.bad { background: rgba(255,45,120,.15); color: #ff2d78; border: 1rpx solid rgba(255,45,120,.5); }
+.poster-btn { margin-top: 30rpx; background: linear-gradient(135deg,#00f0ff,#b026ff); color: #fff; font-weight: 800; border-radius: 14rpx; }
+.challenge-btn { margin-top: 12rpx; background: rgba(255,230,0,.1); color: #ffe600; border: 1rpx solid rgba(255,230,0,.5); border-radius: 14rpx; }
+.share-btn { margin-top: 12rpx; background: rgba(255,255,255,.06); color: #00f0ff; border: 1rpx solid rgba(0,240,255,.4); border-radius: 14rpx; }
+.empty { text-align: center; color: #5b6c8c; margin-top: 120rpx; }

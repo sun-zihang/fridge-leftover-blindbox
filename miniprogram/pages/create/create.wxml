@@ -1,0 +1,55 @@
+<view class="page">
+  <!-- 好友投喂横幅 -->
+  <view class="challenge-banner" wx:if="{{challengeBanner}}">
+    <text class="banner-emoji">🍽️</text>
+    <view class="banner-text">
+      <text class="banner-title">来自好友的投喂</text>
+      <text class="banner-sub">TA 甩给你一道「黑暗料理」，接受后双方 +20 积分</text>
+    </view>
+    <button class="accept-btn" size="mini" bindtap="acceptChallenge">接受挑战</button>
+  </view>
+
+  <!-- 结果 -->
+  <view class="result" wx:if="{{recipe}}">
+    <view class="dish-name neon">{{recipe.name}}</view>
+    <view class="points-line" wx:if="{{pointsLine}}">{{pointsLine}}</view>
+    <view class="dish-ingredients" wx:if="{{ingredients}}">食材：{{ingredients}}</view>
+
+    <view class="section-toggle" bindtap="toggleSteps">
+      <text>👨‍🍳 轻触查看做法</text><text class="chev {{stepsOpen ? 'open' : ''}}">▾</text>
+    </view>
+    <view class="collapsible" wx:if="{{stepsOpen}}">
+      <view class="step-card" wx:for="{{recipe.steps}}" wx:key="index" data-index="{{index}}" bindtap="flipStep">
+        <view class="step-inner {{item.flipped ? 'flipped' : ''}}">
+          <view class="step-face step-front">
+            <text class="step-num">{{index + 1}}</text>
+            <text class="step-emoji">{{stepEmojis[index % 6]}}</text>
+            <text class="step-flip-hint">轻触翻面</text>
+          </view>
+          <view class="step-face step-back">{{item.text}}</view>
+        </view>
+      </view>
+      <view class="flip-hint">👆 轻触卡片翻面查看步骤</view>
+    </view>
+
+    <view class="section-title">🍽️ 摆盘建议</view>
+    <view class="plating">“{{recipe.plating}}”</view>
+
+    <view class="section-toggle" bindtap="toggleWarning">
+      <text>⚠️ 轻触查看主厨警告</text><text class="chev {{warningOpen ? 'open' : ''}}">▾</text>
+    </view>
+    <view class="warning" wx:if="{{warningOpen}}">{{recipe.warning}}</view>
+
+    <view class="rate-row">
+      <text class="rate-title">这菜你觉得？</text>
+      <button class="rate-btn good" size="mini" data-rating="真香" bindtap="rate">真香 😋</button>
+      <button class="rate-btn bad" size="mini" data-rating="已进医院" bindtap="rate">已进医院 🚑</button>
+    </view>
+
+    <button class="poster-btn" bindtap="goPoster">{{posterBtnText}}</button>
+    <button class="challenge-btn" bindtap="makeChallenge" wx:if="{{recordId}}">🔥 甩锅给好友</button>
+    <button class="share-btn" open-type="share">分享给好友</button>
+  </view>
+
+  <view class="empty" wx:else>正在把菜端上来…</view>
+</view>

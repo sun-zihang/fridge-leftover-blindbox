@@ -1,0 +1,62 @@
+<view class="page">
+  <view class="hero">
+    <view class="title neon">冰箱剩菜盲盒</view>
+    <view class="subtitle">深夜食堂主厨 · 在线整活</view>
+  </view>
+
+  <!-- 生存挑战卡 -->
+  <view class="challenge-card" wx:if="{{player}}">
+    <view class="challenge-stats">
+      <view class="stat"><text class="stat-icon">🔥</text><text class="stat-num">{{player.streak}}</text><text class="stat-label">连续天数</text></view>
+      <view class="stat"><text class="stat-icon">🪙</text><text class="stat-num">{{player.points}}</text><text class="stat-label">生存积分</text></view>
+      <view class="stat"><text class="stat-icon">🏅</text><text class="stat-num">{{player.badges.length}}</text><text class="stat-label">徽章</text></view>
+    </view>
+    <view class="badge-wall">
+      <view class="badge-chip {{player.badges.indexOf(item.id) >= 0 ? '' : 'locked'}}" wx:for="{{badges}}" wx:key="id">{{item.emoji}} {{item.id}}</view>
+    </view>
+  </view>
+
+  <!-- 输入 -->
+  <view class="input-card">
+    <textarea class="input-area" maxlength="200" placeholder="例如：半个洋葱、两包泡面、一瓶可乐" value="{{ingredients}}" bindinput="onInput"></textarea>
+    <view class="input-footer">
+      <button class="mic-btn" wx:if="{{micReady}}" bindtap="toggleMic" size="mini">{{micOn ? '🔊 结束' : '🎙️ 语音'}}</button>
+      <text class="mic-hint" wx:if="{{micText}}">{{micText}}</text>
+      <text class="char-count">{{charCount}}</text>
+    </view>
+  </view>
+
+  <!-- 风格选择 -->
+  <view class="style-row">
+    <text class="style-label">主厨风格</text>
+    <scroll-view scroll-x class="style-scroll">
+      <view class="style-list">
+        <view class="style-chip {{item.id === styleId ? 'selected' : ''}} {{item.unlocked ? '' : 'locked'}}" wx:for="{{styles}}" wx:key="id" data-id="{{item.id}}" bindtap="selectStyle">{{item.name}}{{item.unlocked ? '' : ' 🔒' + item.cost}}</view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <button class="generate-btn" bindtap="onGenerate">召唤主厨 👨‍🍳</button>
+
+  <!-- 剩菜博物馆 -->
+  <view class="rank-section">
+    <view class="rank-title">🏛️ 剩菜博物馆</view>
+    <view class="rank-sub">全网最离谱菜谱大赏 · 按症状分类</view>
+    <scroll-view scroll-x class="rank-tabs">
+      <view class="rank-tab {{item === rankTag ? 'active' : ''}}" wx:for="{{rankTabs}}" wx:key="*this" data-tag="{{item}}" bindtap="onRankTab">{{item}}</view>
+    </scroll-view>
+    <scroll-view scroll-x class="rank-scroll" enhanced show-scrollbar="{{false}}">
+      <view class="rank-item" wx:for="{{rankData}}" wx:key="index" data-index="{{index}}" bindtap="onRankTap">
+        <view class="rank-emoji">{{item.rating === '已进医院' ? '🚑' : '😋'}}</view>
+        <view class="rank-dish">{{item.name}}</view>
+        <view class="rank-comment">{{item.warning}}</view>
+        <view class="rank-foot">
+          <text class="rank-tag {{item.rating === '已进医院' ? 'tag-bad' : 'tag-good'}}">{{item.rating}}</text>
+          <text class="rank-tag-mini">{{item.tag}}</text>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="footer">Powered by 腾讯云开发 CloudBase · AI 深夜食堂</view>
+</view>

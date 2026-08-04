@@ -94,6 +94,36 @@ node --check cloudfunctions/generateRecipe/index.js
 node --test cloudfunctions/generateRecipe/test/recipe.test.js
 ```
 
+## 🧪 微信小程序版（可选）
+
+> 后端与网页版**共用同一套 CloudBase**（同一个云函数 `generateRecipe`、同一个 `recipes/players/challenges` 集合），小程序版只是换了一层前端。
+
+### 项目结构
+```
+miniprogram/
+├── app.js / app.json / app.wxss   # 小程序壳（wx.cloud.init）
+├── utils/
+│   ├── cloud.js                   # wx.cloud.callFunction 封装
+│   └── game.js                    # 与云函数对齐的常量（风格/标签/徽章/文案）
+└── pages/
+    ├── index/                     # 挑战卡 + 输入 + 语音 + 风格 + 剩菜博物馆
+    ├── create/                    # 生成结果 + 翻牌步骤 + 评价 + 甩锅/接受挑战
+    └── poster/                    # Canvas 海报（普通/米其林证书/急诊挂号单）+ 保存相册
+project.config.json                # miniprogramRoot / cloudfunctionRoot
+```
+
+### 运行方式
+1. 微信开发者工具 → 导入项目 → 选择**仓库根目录**（`project.config.json` 已配置好）。
+2. 把 `project.config.json` 里的 `appid` 从 `touristappid` 换成**已开通云开发的 AppID**（游客模式无法使用云能力）。
+3. 云函数无需重复部署——直接复用已上线的 `generateRecipe`（已含 generate/rate/listRank/getPlayer/unlockStyle/createChallenge/acceptChallenge）。
+4. 语音输入：`app.json` 已配置「微信同声传译」插件（`WechatSI`），需在公众平台「设置 → 第三方设置」里添加该插件。
+
+### 与网页版的差异（小程序优势）
+- **身份更稳**：微信登录自带 openid，连续打卡不再受「清缓存换号」影响（网页版匿名 UID 的已知限制在此消除）。
+- **真分享卡片**：`onShareAppMessage` 可自定义标题/路径，甩锅挑战直接生成带 `?challenge=` 的分享卡片。
+- **待补**：小程序码（云函数 `wxacode.getUnlimited` 生成分享海报码）、订阅消息（开盲盒结果通知）。
+
+
 ## 🐛 常见问题
 - **云函数调用失败 / 报错 model not enabled**：按上文第 4 步启用模型并确认 Token 资源包已开通。
 - **网页无法调用云函数（权限/CORS）**：确认匿名登录已开启、Web 安全域名已添加。

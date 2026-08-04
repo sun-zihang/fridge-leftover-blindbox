@@ -1,0 +1,16 @@
+{
+  "compileType": "miniprogram",
+  "appid": "touristappid",
+  "projectname": "fridge-leftover-blindbox",
+  "miniprogramRoot": "miniprogram/",
+  "cloudfunctionRoot": "cloudfunctions/",
+  "setting": {
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "urlCheck": false
+  },
+  "libVersion": "3.4.3",
+  "condition": {}
+}

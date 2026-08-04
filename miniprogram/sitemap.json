@@ -1,0 +1,9 @@
+{
+  "desc": "冰箱剩菜盲盒",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}
