@@ -1,0 +1,71 @@
+/* 全局样式：赛博朋克 / 复古像素风 */
+page {
+  background: #0a0e1a;
+  color: #e6f7ff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+view, text, button, textarea, scroll-view {
+  box-sizing: border-box;
+}
+
+/* 霓虹标题 */
+.neon-title {
+  font-weight: 900;
+  letter-spacing: 8rpx;
+  color: #00f0ff;
+  text-shadow:
+    0 0 10rpx rgba(0, 240, 255, 0.9),
+    0 0 30rpx rgba(0, 240, 255, 0.6),
+    0 0 60rpx rgba(0, 240, 255, 0.35);
+}
+
+.neon-pink {
+  color: #ff2d78;
+  text-shadow:
+    0 0 10rpx rgba(255, 45, 120, 0.9),
+    0 0 30rpx rgba(255, 45, 120, 0.6),
+    0 0 60rpx rgba(255, 45, 120, 0.35);
+}
+
+.neon-flicker {
+  animation: neonFlicker 3.5s infinite;
+}
+
+@keyframes neonFlicker {
+  0%, 18%, 22%, 25%, 53%, 57%, 100% {
+    opacity: 1;
+    text-shadow:
+      0 0 10rpx rgba(0, 240, 255, 0.9),
+      0 0 30rpx rgba(0, 240, 255, 0.6),
+      0 0 60rpx rgba(0, 240, 255, 0.35);
+  }
+  20%, 24%, 55% {
+    opacity: 0.55;
+    text-shadow: none;
+  }
+}
+
+/* 主按钮 */
+.btn-primary {
+  background: linear-gradient(135deg, #00f0ff, #b026ff);
+  color: #0a0e1a;
+  font-weight: 700;
+  border: none;
+  border-radius: 16rpx;
+  box-shadow: 0 0 24rpx rgba(0, 240, 255, 0.45);
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+/* 通用卡片 */
+.panel {
+  background: rgba(20, 28, 56, 0.75);
+  border: 2rpx solid rgba(0, 240, 255, 0.25);
+  border-radius: 20rpx;
+  box-shadow: 0 0 24rpx rgba(0, 240, 255, 0.08);
+}

@@ -1,0 +1,67 @@
+<view class="page">
+  <view class="header">
+    <view class="header-title">报菜名！</view>
+    <view class="header-sub">告诉我冰箱里还活着什么食材</view>
+  </view>
+
+  <view class="input-card panel">
+    <textarea
+      class="ingredient-input"
+      value="{{ingredients}}"
+      maxlength="200"
+      placeholder="例如：半个洋葱、两包泡面、一瓶可乐"
+      placeholder-class="ph"
+      auto-height
+      disabled="{{generating}}"
+      bindinput="onInput"
+    />
+    <view class="input-footer">
+      <view class="mic-btn {{recording ? 'mic-active' : ''}}" bindtap="onVoiceTap">
+        <text class="mic-icon">{{recording ? '⏹' : '🎙️'}}</text>
+        <text class="mic-text">{{micText}}</text>
+      </view>
+      <view class="char-count">{{charCount}}/200</view>
+    </view>
+  </view>
+
+  <button
+    class="generate-btn"
+    hover-class="generate-btn-hover"
+    bindtap="onGenerate"
+    disabled="{{generating}}"
+  >{{generating ? '锅中冒泡中…' : '召唤主厨 👨‍🍳'}}</button>
+
+  <view class="pot-loading" wx:if="{{generating}}">
+    <view class="pot">🍲</view>
+    <view class="bubble b1"></view>
+    <view class="bubble b2"></view>
+    <view class="bubble b3"></view>
+    <view class="pot-text">AI 主厨正在脑暴你的剩菜…</view>
+  </view>
+
+  <view class="result" wx:if="{{showResult && recipe}}">
+    <view class="result-name neon-pink">{{recipe.name}}</view>
+    <view class="result-ingredients">食材：{{ingredients}}</view>
+
+    <view class="section-title">👨‍🍳 做法</view>
+    <view class="step-card panel" wx:for="{{recipe.steps}}" wx:key="index">
+      <view class="step-index">{{index + 1}}</view>
+      <view class="step-text">{{item}}</view>
+    </view>
+
+    <view class="section-title">🍽️ 摆盘建议</view>
+    <view class="plating">“{{recipe.plating}}”</view>
+
+    <view class="section-title">⚠️ 主厨警告</view>
+    <view class="warning">{{recipe.warning}}</view>
+
+    <view class="rate-row">
+      <view class="rate-title">这菜你觉得？</view>
+      <button class="rate-btn rate-good" data-rating="真香" bindtap="onRate" disabled="{{rated}}">真香 😋</button>
+      <button class="rate-btn rate-bad" data-rating="已进医院" bindtap="onRate" disabled="{{rated}}">已进医院 🚑</button>
+    </view>
+
+    <button class="poster-btn btn-primary" bindtap="goPoster">生成朋友圈打卡海报 📸</button>
+    <button class="share-btn" open-type="share">分享给好友</button>
+  </view>
+</view>

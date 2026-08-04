@@ -1,0 +1,17 @@
+<view class="poster-page">
+  <scroll-view scroll-y class="poster-scroll">
+    <view class="canvas-wrap">
+      <canvas
+        type="2d"
+        id="posterCanvas"
+        class="poster-canvas"
+        style="{{canvasStyle}}"
+      ></canvas>
+    </view>
+    <view class="actions">
+      <button class="action-btn save-btn" bindtap="saveToAlbum" loading="{{saving}}">保存到相册</button>
+      <button class="action-btn share-btn" open-type="share">分享给好友</button>
+    </view>
+    <view class="tip">分享海报到朋友圈，让朋友猜猜你做了什么黑暗料理</view>
+  </scroll-view>
+</view>

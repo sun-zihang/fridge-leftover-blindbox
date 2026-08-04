@@ -1,0 +1,23 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/create/create",
+    "pages/poster/poster"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#0a0e1a",
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "冰箱剩菜盲盒",
+    "backgroundColor": "#0a0e1a",
+    "backgroundTextStyle": "light"
+  },
+  "plugins": {
+    "WechatSI": {
+      "version": "0.3.5",
+      "provider": "wx069ba97219f66d99"
+    }
+  },
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents",
+  "sitemapLocation": "sitemap.json"
+}

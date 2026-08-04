@@ -1,0 +1,9 @@
+{
+  "name": "generateRecipe",
+  "version": "1.0.0",
+  "description": "AI 生成创意菜谱云函数（CloudBase 托管大模型）",
+  "main": "index.js",
+  "dependencies": {
+    "@cloudbase/node-sdk": "^3.16.0"
+  }
+}
