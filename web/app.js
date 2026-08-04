@@ -8,7 +8,7 @@
   var isDemo = !CLOUD_ENV_ID || CLOUD_ENV_ID === 'YOUR_ENV_ID';
 
   var cloudApp = null;
-var state = { recipe: null, recordId: '', rated: false, generating: false, styleId: 'classic', mode: 'weird', player: null, styles: [], rankData: [], rankTag: '全部', posterSkin: 'normal', challengeId: '', detailRecipe: null };
+var state = { recipe: null, recordId: '', rated: false, generating: false, styleId: 'classic', mode: 'weird', player: null, styles: [], rankData: [], rankTag: '全部', posterSkin: 'normal', challengeId: '', detailRecipe: null, rankDetailRecipe: null };
 
   function $(id) { return document.getElementById(id); }
   var els = {
@@ -47,6 +47,7 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     rankModalDish: $('rankModalDish'),
     rankModalTag: $('rankModalTag'),
     rankModalComment: $('rankModalComment'),
+    rankDetailBtn: $('rankDetailBtn'),
     rankTabs: $('rankTabs'),
     challengeCard: $('challengeCard'),
     statStreak: $('statStreak'),
@@ -950,12 +951,27 @@ recognition.interimResults = true;
   // 从演示菜池随机抽取 count 条
   var RANK_TAGS = ['深夜emo必吃', '月底吃土首选', '前任看了想打人', '吃完能瘦十斤（骗你的）', '硬核养生'];
   function tagForDemo() { return RANK_TAGS[Math.floor(Math.random() * RANK_TAGS.length)]; }
+  // 演示菜的「制作过程」：用菜名即兴编一段搞笑做法
+  function recipeForDemo(it) {
+    return {
+      name: it.dish,
+      steps: [
+        '把「' + it.dish + '」的所有原料倒进锅里，告诉它们：今天要么成菜，要么成仁。',
+        '大火烧开转小火，让它们在汤汁里互相说服，谁先投降谁先入味。',
+        '出锅前凭手感撒一把调料，主打一个「米其林盲盒」。',
+        '盛出来那一刻闭眼深呼吸——是惊喜还是惊吓，吃了才知道。'
+      ],
+      plating: it.rating === '已进医院' ? '用你最喜欢的盘子，纪念这顿英勇就义的晚餐。' : '认真摆个盘，证明黑暗料理也可以有仪式感。',
+      warning: it.comment
+    };
+  }
   // 从演示菜池随机抽取 count 条（含随机症状标签）
   function randomRankItems(count) {
     return shuffleRank(RANK_DEMO).slice(0, count).map(function (it) {
       var copy = {};
       for (var k in it) { if (Object.prototype.hasOwnProperty.call(it, k)) copy[k] = it[k]; }
       copy.tag = copy.tag || tagForDemo();
+      copy.recipe = recipeForDemo(it);
       return copy;
     });
   }
@@ -971,7 +987,8 @@ recognition.interimResults = true;
             dish: item.name || '未命名料理',
             comment: item.warning || (item.ingredients ? '食材：' + item.ingredients : ''),
             rating: item.rating || '待评价',
-            tag: item.tag || '硬核养生'
+            tag: item.tag || '硬核养生',
+            recipe_data: item.recipe_data || null
           };
         });
         var items;
@@ -1040,6 +1057,10 @@ recognition.interimResults = true;
     els.rankModalTag.textContent = item.rating || '';
     els.rankModalTag.className = 'rank-modal-tag ' + (item.rating === '已进医院' ? 'tag-bad' : 'tag-good');
     els.rankModalComment.textContent = item.comment || '';
+    var rd = item.recipe_data || item.recipe || null;
+    var hasRecipe = !!(rd && Array.isArray(rd.steps) && rd.steps.length);
+    state.rankDetailRecipe = hasRecipe ? rd : null;
+    els.rankDetailBtn.classList.toggle('hidden', !hasRecipe);
     els.rankModal.classList.remove('hidden');
   }
   function closeRankModal() {
@@ -1048,6 +1069,10 @@ recognition.interimResults = true;
   els.rankModalClose.addEventListener('click', closeRankModal);
   els.rankModal.addEventListener('click', function (e) {
     if (e.target === els.rankModal || e.target.classList.contains('rank-modal-backdrop')) closeRankModal();
+  });
+  // 红黑榜：查看制作过程 → 复用详细菜单弹层
+  els.rankDetailBtn.addEventListener('click', function () {
+    renderDetail(state.rankDetailRecipe || state.recipe);
   });
 
   /* ===== 详细菜单制作界面（内置菜谱库） ===== */

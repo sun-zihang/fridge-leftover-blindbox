@@ -521,3 +521,16 @@ html, body {
 @media (max-width: 420px) {
   .detail-modal-card { padding: 30px 18px 22px; }
 }
+
+
+/* ===== 红黑榜：查看制作过程 ===== */
+.rank-detail-btn {
+  width: 100%; margin-top: 14px;
+  padding: 11px 0; border-radius: 12px;
+  background: linear-gradient(135deg, rgba(0,240,255,.14), rgba(176,38,255,.14));
+  border: 1px solid rgba(0,240,255,.45);
+  color: #00f0ff; font-size: 14px; font-weight: 800;
+  cursor: pointer; font-family: inherit;
+  transition: transform .15s, box-shadow .15s;
+}
+.rank-detail-btn:hover { transform: translateY(-1px); box-shadow: 0 0 16px rgba(0,240,255,.25); }

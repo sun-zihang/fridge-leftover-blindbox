@@ -167,6 +167,16 @@ Page({
   onRankTap(e) {
     const it = this.data.rankData[e.currentTarget.dataset.index];
     if (!it) return;
+    const rd = it.recipe_data;
+    if (rd && Array.isArray(rd.steps) && rd.steps.length) {
+      // 有完整菜谱 → 跳转制作页查看制作过程（含详细菜单）
+      const g = app.globalData;
+      g.recipe = rd;
+      g.ingredients = it.ingredients || '';
+      g.recordId = ''; // 榜单菜不传 recordId，避免重复评价覆盖他人战绩
+      wx.navigateTo({ url: '/pages/create/create?tag=' + encodeURIComponent(it.tag || '硬核养生') });
+      return;
+    }
     wx.showModal({
       title: it.name,
       content: (it.rating === '已进医院' ? '🚑 ' : '😋 ') + it.rating + '\n' + it.tag + '\n\n' + it.warning,

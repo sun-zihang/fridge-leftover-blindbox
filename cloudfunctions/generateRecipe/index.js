@@ -222,11 +222,13 @@ async function listRank(tag) {
   return rated.slice(0, 30).map(function (d) {
     const rd = d.recipe_data || {};
     return {
+      recordId: typeof d._id === 'string' ? d._id : '',
       name: typeof rd.name === 'string' && rd.name ? rd.name : '未命名料理',
       rating: typeof d.user_rating === 'string' ? d.user_rating : '',
       warning: typeof rd.warning === 'string' ? rd.warning : '',
       ingredients: typeof d.ingredients === 'string' ? d.ingredients : '',
-      tag: typeof d.tag === 'string' ? d.tag : '硬核养生'
+      tag: typeof d.tag === 'string' ? d.tag : '硬核养生',
+      recipe_data: rd
     };
   });
 }
