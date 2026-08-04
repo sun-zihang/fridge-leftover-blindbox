@@ -8,3 +8,11 @@ page {
 view, text, button, scroll-view { box-sizing: border-box; }
 /* 去掉 button 默认边框 */
 button::after { border: none; }
+
+/* ===== 电脑端（PC 微信）适配 ===== */
+/* 大屏限制内容宽度居中，避免 rpx 随窗口宽度膨胀 */
+@media (min-width: 768px) {
+  .page { max-width: 800px; margin-left: auto; margin-right: auto; }
+}
+/* 鼠标悬停反馈（PC 端用），按钮点击有缩放反馈 */
+.btn-hover { opacity: .82; transform: scale(.98); }

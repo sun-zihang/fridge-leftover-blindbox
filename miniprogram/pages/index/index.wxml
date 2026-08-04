@@ -36,7 +36,7 @@
     </scroll-view>
   </view>
 
-  <button class="generate-btn" bindtap="onGenerate">召唤主厨 👨‍🍳</button>
+  <button class="generate-btn" bindtap="onGenerate" hover-class="btn-hover">召唤主厨 👨‍🍳</button>
 
   <!-- 剩菜博物馆 -->
   <view class="rank-section">

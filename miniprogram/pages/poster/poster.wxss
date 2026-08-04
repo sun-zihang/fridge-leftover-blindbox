@@ -10,3 +10,5 @@ page { background: #0a0e1a; color: #e6f7ff; }
 /* ===== 设备自适应 ===== */
 .page { padding-bottom: calc(60rpx + env(safe-area-inset-bottom)); }
 .save-btn, .share-btn { min-height: 44px; }
+
+@media (min-width: 768px) { .poster-canvas { max-width: 560px; margin: 0 auto; display: block; } }

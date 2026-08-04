@@ -6,7 +6,7 @@
       <text class="banner-title">来自好友的投喂</text>
       <text class="banner-sub">TA 甩给你一道「黑暗料理」，接受后双方 +20 积分</text>
     </view>
-    <button class="accept-btn" size="mini" bindtap="acceptChallenge">接受挑战</button>
+    <button class="accept-btn" size="mini" bindtap="acceptChallenge" hover-class="btn-hover">接受挑战</button>
   </view>
 
   <!-- 结果 -->
@@ -46,9 +46,9 @@
       <button class="rate-btn bad" size="mini" data-rating="已进医院" bindtap="rate">已进医院 🚑</button>
     </view>
 
-    <button class="poster-btn" bindtap="goPoster">{{posterBtnText}}</button>
+    <button class="poster-btn" bindtap="goPoster" hover-class="btn-hover">{{posterBtnText}}</button>
     <button class="challenge-btn" bindtap="makeChallenge" wx:if="{{recordId}}">🔥 甩锅给好友</button>
-    <button class="share-btn" open-type="share">分享给好友</button>
+    <button class="share-btn" open-type="share" hover-class="btn-hover">分享给好友</button>
   </view>
 
   <view class="empty" wx:else>正在把菜端上来…</view>

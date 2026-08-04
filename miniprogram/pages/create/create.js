@@ -34,8 +34,10 @@ Page({
   },
 
   renderRecipe(recipe, ingredients, recordId, pointsLine) {
+    // 关键：把步骤转成 { text, flipped } 并写回 recipe.steps（WXML 遍历的是 recipe.steps）
     const steps = (recipe.steps || []).map((s) => ({ text: s, flipped: false }));
-    this.setData({ recipe: recipe, ingredients: ingredients, recordId: recordId, pointsLine: pointsLine, steps: steps });
+    const recipeObj = Object.assign({}, recipe, { steps: steps });
+    this.setData({ recipe: recipeObj, ingredients: ingredients, recordId: recordId, pointsLine: pointsLine });
   },
 
   toggleSteps() { this.setData({ stepsOpen: !this.data.stepsOpen }); },
