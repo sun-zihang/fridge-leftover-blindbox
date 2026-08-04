@@ -1,6 +1,9 @@
 // 云函数纯逻辑：兜底菜谱 / JSON 提取 / 校验规范化
 // 独立成模块以便本地单元测试（node --test），不依赖云环境。
 
+// 内置家常菜谱库（206 道，蒸馏自「厨房小课堂」）
+const NR = require('./normalRecipes');
+
 // 兜底菜谱：AI 彻底失败时返回，保证前端不崩溃
 // 内置兜底菜谱池：AI 不可用时随机上一道（丰富度：6 套）
 const FALLBACK_POOL = [
@@ -139,4 +142,11 @@ function calcPoints(parts) {
   return total;
 }
 
-module.exports = { fallbackRecipe: fallbackRecipe, extractJson: extractJson, normalizeRecipe: normalizeRecipe, STYLES: STYLES, STYLE_PROMPTS: STYLE_PROMPTS, guessTag: guessTag, calcPoints: calcPoints };
+// 正常家常模式兜底：从内置菜谱库按食材匹配，无命中则随机上一道
+// 返回带详细菜单字段的菜谱（ings/prep/tips/desc/scene/time/lib）
+function normalFallbackRecipe(ingredients) {
+  return NR.getNormalAppRecipe(ingredients);
+}
+
+
+module.exports = { fallbackRecipe: fallbackRecipe, normalFallbackRecipe: normalFallbackRecipe, extractJson: extractJson, normalizeRecipe: normalizeRecipe, STYLES: STYLES, STYLE_PROMPTS: STYLE_PROMPTS, guessTag: guessTag, calcPoints: calcPoints };

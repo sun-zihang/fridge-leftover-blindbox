@@ -9,9 +9,10 @@
 
 const tcb = require('@cloudbase/node-sdk');
 const {
-  fallbackRecipe, extractJson, normalizeRecipe,
+  fallbackRecipe, normalFallbackRecipe, extractJson, normalizeRecipe,
   STYLES, STYLE_PROMPTS, guessTag, calcPoints
 } = require('./recipe');
+const NR = require('./normalRecipes');
 
 const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV });
 const ai = app.ai();
@@ -155,6 +156,13 @@ function stylesView(p) {
 // ---------- AI 生成 ----------
 
 async function generate(ingredients, style, mode) {
+  // 正常家常模式：优先从内置菜谱库（206 道家常菜）按食材匹配，命中直接返回（含详细菜单字段）
+  if (mode === 'normal') {
+    const hit = NR.matchNormalRecipe(ingredients);
+    if (hit) {
+      return { recipe: NR.toAppRecipe(hit), fallback: false, fromLib: true, lastError: '' };
+    }
+  }
   const model = ai.createModel('cloudbase');
   let recipe = null;
   let lastError = '';
@@ -186,9 +194,12 @@ async function generate(ingredients, style, mode) {
   }
 
   if (!recipe) {
+    if (mode === 'normal') {
+      return { recipe: normalFallbackRecipe(ingredients), fallback: true, fromLib: true, lastError: lastError };
+    }
     return { recipe: fallbackRecipe(), fallback: true, lastError: lastError };
   }
-  return { recipe: recipe, fallback: false, lastError: lastError };
+  return { recipe: recipe, fallback: false, fromLib: false, lastError: lastError };
 }
 
 // ---------- 红黑榜 / 博物馆 ----------
@@ -390,6 +401,7 @@ exports.main = async (rawEvent) => {
         recipe: generated.recipe,
         recordId: addRes.id || addRes._id || '',
         fallback: generated.fallback,
+        fromLib: generated.fromLib || false,
         tag: tag,
         style: style.id,
         points_gained: pointsGained,
