@@ -348,3 +348,19 @@ html, body {
 }
 .rank-modal-comment { margin-top: 16px; color: #dceaff; font-size: 14px; line-height: 1.8; text-align: left; }
 .rank-modal-foot { margin-top: 18px; color: #5b6c8c; font-size: 12px; }
+
+
+/* ===== 开盲盒：折叠面板 ===== */
+.section-toggle {
+  width: 100%; margin: 28px 0 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  font-size: 17px; font-weight: 700; color: #00f0ff;
+  letter-spacing: 1px; text-align: left; padding: 6px 2px;
+  border-bottom: 1px dashed rgba(0,240,255,.25);
+  transition: color .15s;
+}
+.section-toggle:hover { color: #ff2d78; }
+.section-toggle .chev { transition: transform .25s; color: #8ea2c8; font-size: 14px; }
+.section-toggle.open .chev { transform: rotate(180deg); }
+.collapsible { overflow: hidden; animation: dishIn .35s ease-out; }

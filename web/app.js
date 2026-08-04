@@ -25,6 +25,9 @@
     dishIngredients: $('dishIngredients'),
     steps: $('steps'),
     flipHint: $('flipHint'),
+    stepsToggle: $('stepsToggle'),
+    stepsWrap: $('stepsWrap'),
+    warningToggle: $('warningToggle'),
     plating: $('plating'),
     warning: $('warning'),
     posterBtn: $('posterBtn'),
@@ -139,26 +142,41 @@ recognition.interimResults = true;
   /* ===== 等待动画：趣味文案轮播 ===== */
   var LOADING_LINES = [
     'AI 主厨正在和泡面进行灵魂搏斗…',
-    '可乐和洋葱正在谈判，气氛一度很紧张…',
+    '可乐和洋葱的谈判进入了白热化阶段…',
+    '正在为你的剩菜注入米其林灵魂…',
     '冰箱深处传来神秘的咕噜声…',
     '主厨决定让鸡蛋和酸奶先和解…',
     '正在把黑暗料理往“能吃”的方向硬拽…',
-    '泡面已经就位，就差一个大胆的创意…'
+    '泡面已经就位，就差一个大胆的创意…',
+    '洋葱哭了，但主厨说这是料理的一部分…',
+    '主厨正在给剩菜们做“入职培训”…',
+    '冰箱里传来一阵低语：“求你别放过我”…',
+    '主厨深吸一口气，决定赌一把大的…',
+    '调味料们正在举手表决今晚的菜名…'
   ];
   var potTimer = null;
+  function shuffleArr(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
   function startPotShow() {
-    startPotShow();
-    els.potText.textContent = LOADING_LINES[0];
+    els.potLoading.classList.remove('hidden');
+    var queue = shuffleArr(LOADING_LINES);
     var idx = 0;
+    els.potText.textContent = queue[0];
     if (potTimer) clearInterval(potTimer);
     potTimer = setInterval(function () {
-      idx = (idx + 1) % LOADING_LINES.length;
-      els.potText.textContent = LOADING_LINES[idx];
+      idx = (idx + 1) % queue.length;
+      els.potText.textContent = queue[idx];
     }, 1800);
   }
   function stopPotShow() {
     if (potTimer) { clearInterval(potTimer); potTimer = null; }
-    stopPotShow();
+    els.potLoading.classList.add('hidden');
   }
 
 
@@ -211,6 +229,10 @@ recognition.interimResults = true;
     els.potLoading.classList.add('hidden');
 
     els.dishName.textContent = recipe.name;
+    els.stepsWrap.classList.add('hidden');
+    els.warning.classList.add('hidden');
+    els.stepsToggle.classList.remove('open');
+    els.warningToggle.classList.remove('open');
     els.dishIngredients.textContent = '食材：' + ingredients;
     els.steps.innerHTML = '';
     var stepEmojis = ['🔪', '🔥', '🍳', '🧂', '✨', '🍜'];
@@ -252,8 +274,6 @@ recognition.interimResults = true;
       });
       els.steps.appendChild(li);
     });
-    if (recipe.steps && recipe.steps.length) { els.flipHint.classList.remove('hidden'); }
-    else { els.flipHint.classList.add('hidden'); }
     els.plating.textContent = '“' + recipe.plating + '”';
     els.warning.textContent = recipe.warning;
     els.result.classList.remove('hidden');
@@ -263,16 +283,39 @@ recognition.interimResults = true;
 
   /* ===== 演示模式兜底 ===== */
   function demoRecipe(ingredients) {
-    return {
-      name: '主厨的倔强炒饭',
-      steps: [
-        '把「' + ingredients + '」切成丁，假装它们本来就是一个团队。',
-        '热锅凉油，倒入食材，翻炒到它们认命为止。',
-        '出锅前撒一把葱花，主打一个“尽力了”。'
-      ],
-      plating: '用一个平时不敢用的盘子，凹出米其林三星的自信。',
-      warning: '肠胃敏感者请酌情食用，厨房已尽力，后果自负。'
-    };
+    var pool = [
+      {
+        name: '主厨的倔强炒饭',
+        steps: [
+          '把“' + ingredients + '”切成丁，假装它们本来就是一个团队。',
+          '热锅凉油，倒入食材，翻炒到它们认命为止。',
+          '出锅前撒一把葱花，主打一个“尽力了”。'
+        ],
+        plating: '用一个平时不敢用的盘子，凹出米其林三星的自信。',
+        warning: '肠胃敏感者请酌情食用，厨房已尽力，后果自负。'
+      },
+      {
+        name: '剩菜大乱炖·绝地求生版',
+        steps: [
+          '把所有食材倒进锅里，告诉它们“这是团队合作”。',
+          '大火烧开转小火，让矛盾在汤汁里慢慢和解。',
+          '出锅前尝一口，记住这个味道，别浪费。'
+        ],
+        plating: '直接端锅上桌，主打一个真诚。',
+        warning: '本菜不承担任何“吃完想家”或“想给主厨打钱”的责任。'
+      },
+      {
+        name: '冰箱盲盒·命运交响曲',
+        steps: [
+          '闭着眼把食材扔进锅，让命运做决定。',
+          '翻一翻、搅一搅，假装自己很专业。',
+          '盛出来那一刻，你就是深夜的米其林。'
+        ],
+        plating: '用最亮的盘子，衬托最野的菜。',
+        warning: '如果味道太魔幻，请怪冰箱，别怪主厨。'
+      }
+    ];
+    return pool[Math.floor(Math.random() * pool.length)];
   }
 
   /* ===== 评价 ===== */
@@ -298,6 +341,16 @@ recognition.interimResults = true;
   });
 
   /* ===== 海报 ===== */
+  /* ===== 开盲盒：做法 / 主厨警告 折叠面板 ===== */
+  els.stepsToggle.addEventListener('click', function () {
+    var closed = els.stepsWrap.classList.toggle('hidden');
+    els.stepsToggle.classList.toggle('open', !closed);
+  });
+  els.warningToggle.addEventListener('click', function () {
+    var closed = els.warning.classList.toggle('hidden');
+    els.warningToggle.classList.toggle('open', !closed);
+  });
+
   els.posterBtn.addEventListener('click', function () {
     if (!state.recipe) return;
     drawPoster(state.recipe, els.ingredients.value.trim());
@@ -340,7 +393,14 @@ recognition.interimResults = true;
     ctx.fillStyle = '#ffe600';
     ctx.font = 'italic 26px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('“我让 AI 用冰箱剩菜做了顿饭，结果…”', W / 2, 235);
+    var TEASERS = [
+      '“我让 AI 用冰箱剩菜做了顿饭，结果…”',
+      '“剩菜也能整活？主厨表示有被冒犯到…”',
+      '“深夜食堂今日盲盒，敢不敢试一口？”',
+      '“冰箱里只剩这些？那就交给命运吧…”',
+      '“米其林看了沉默，主厨看了落泪…”'
+    ];
+    ctx.fillText(TEASERS[Math.floor(Math.random() * TEASERS.length)], W / 2, 235);
     glowText(ctx, recipe.name, W / 2, 300, 'bold 64px sans-serif', '#ff2d78', 30);
 
     if (ingredients) {

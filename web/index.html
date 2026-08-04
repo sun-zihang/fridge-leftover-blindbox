@@ -46,15 +46,17 @@
       <h2 id="dishName" class="dish-name neon-pink"></h2>
       <p id="dishIngredients" class="dish-ingredients"></p>
 
-      <h3 class="section-title">👨‍🍳 做法</h3>
-      <ol id="steps" class="steps"></ol>
-      <p id="flipHint" class="flip-hint">👆 轻触步骤卡片翻面查看</p>
+      <button id="stepsToggle" class="section-toggle" type="button"><span>👨‍🍳 轻触查看做法</span><span class="chev">▾</span></button>
+      <div id="stepsWrap" class="collapsible hidden">
+        <ol id="steps" class="steps"></ol>
+        <p id="flipHint" class="flip-hint">👆 轻触步骤卡片翻面查看</p>
+      </div>
 
       <h3 class="section-title">🍽️ 摆盘建议</h3>
       <p id="plating" class="plating"></p>
 
-      <h3 class="section-title">⚠️ 主厨警告</h3>
-      <p id="warning" class="warning"></p>
+      <button id="warningToggle" class="section-toggle" type="button"><span>⚠️ 轻触查看主厨警告</span><span class="chev">▾</span></button>
+      <p id="warning" class="warning hidden"></p>
 
       <div class="rate-row">
         <span class="rate-title">这菜你觉得？</span>

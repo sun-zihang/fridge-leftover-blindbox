@@ -25,13 +25,13 @@ const SYSTEM_PROMPT =
   '"plating": "极其夸张或搞笑的摆盘建议",' +
   '"warning": "一句话提醒这道菜的风险或注意事项"}';
 
-// 调用大模型生成，失败/非法时重试一次
+// 调用大模型生成，失败/非法时最多重试两次（共 3 次尝试）
 async function generate(ingredients) {
   const model = ai.createModel('cloudbase');
   let recipe = null;
   let lastError = '';
 
-  for (let i = 0; i < 2; i++) {
+  for (let i = 0; i < 3; i++) {
     try {
       const messages = [
         { role: 'system', content: SYSTEM_PROMPT },
