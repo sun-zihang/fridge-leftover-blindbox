@@ -116,7 +116,7 @@ project.config.json                # miniprogramRoot / cloudfunctionRoot
 1. 微信开发者工具 → 导入项目 → 选择**仓库根目录**（`project.config.json` 已配置好，`appid` 已填入 `wx2f367d0b24a74fda`）。
 2. **无需在微信环境部署云函数、也无需升级微信云套餐**：小程序通过 `wx.request` 调用**网页版环境 a455 的 HTTP 网关**（路由 `/api/generateRecipe` → 云函数 `generateRecipe`，AI 已在 a455 启用），见 `miniprogram/utils/cloud.js`。
 3. 开发期：`project.config.json` 已设 `urlCheck:false`，开发者工具不会拦截外部域名。**生产发布前**需在小程序后台「开发设置 → 服务器域名」把 `https://a455-d3g2s3dt865d86640-1462708919.ap-shanghai.app.tcloudbase.com` 加入 **request 合法域名**。
-4. 语音输入：`app.json` 已配置「微信同声传译」插件（`WechatSI`），需在公众平台「设置 → 第三方设置 → 插件管理」添加（个人主体小程序不可用，语音按钮会自动隐藏）。
+4. 语音输入：**默认已禁用**（微信同声传译插件在个人主体小程序会报 80082 permission deny）。若你已成功添加插件，把 `app.json` 里的 `plugins` 块（WechatSI / wx069ba97219f66d99）恢复即可，语音按钮会自动出现。
 5. 身份：小程序用**本地 playerId**（`wx.storage`），清缓存会换号；后续可升级为 openid。
 
 ### 与网页版的差异（小程序优势）
