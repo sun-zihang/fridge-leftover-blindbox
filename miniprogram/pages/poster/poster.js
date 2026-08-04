@@ -53,10 +53,12 @@ function drawNormal(ctx, W, H, recipe, ingredients) {
   ctx.fillText('👨‍🍳 做法', 70, yy); yy += 60;
   (recipe.steps || []).forEach(function (s, i) {
     if (yy > 820) return;
+    const text = typeof s === 'string' ? s : (s && s.text ? s.text : '');
+    if (!text) return;
     ctx.fillStyle = '#00f0ff'; ctx.font = 'bold 30px sans-serif';
     ctx.fillText(String(i + 1), 80, yy);
     ctx.fillStyle = '#dceaff'; ctx.font = '28px sans-serif';
-    yy = wrapText(ctx, s, 130, yy, W - 210, 42, 'left') + 26;
+    yy = wrapText(ctx, text, 130, yy, W - 210, 42, 'left') + 26;
   });
   yy += 10;
   ctx.fillStyle = '#ffe600'; ctx.font = 'bold 34px sans-serif';

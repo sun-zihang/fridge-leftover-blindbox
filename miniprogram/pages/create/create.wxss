@@ -44,3 +44,48 @@ page { background: #0a0e1a; color: #e6f7ff; }
 /* ===== UI 打磨 ===== */
 @keyframes dishPop { 0% { transform: scale(.7); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
 .dish-name { animation: dishPop .5s ease-out; }
+
+
+/* ===== 家常菜谱库徽标 ===== */
+.lib-badge {
+  display: inline-block; margin: 8rpx auto 0;
+  padding: 4rpx 20rpx; border-radius: 999rpx;
+  font-size: 12px; font-weight: 700; color: #ffe600;
+  background: rgba(255,230,0,.1); border: 1rpx solid rgba(255,230,0,.4);
+}
+
+/* ===== 详细菜单制作界面 ===== */
+.detail-toggle {
+  display: flex; justify-content: space-between; align-items: center;
+  margin: 28rpx 0 14rpx; padding: 16rpx 20rpx;
+  border-radius: 12rpx;
+  background: linear-gradient(135deg, rgba(0,240,255,.12), rgba(176,38,255,.12));
+  border: 1rpx solid rgba(0,240,255,.45);
+  color: #00f0ff; font-size: 16px; font-weight: 800;
+}
+.detail-panel {
+  padding: 18rpx; border-radius: 14rpx;
+  background: rgba(16,24,52,.7); border: 1rpx solid rgba(0,240,255,.25);
+  animation: dishIn .3s ease-out;
+}
+.detail-meta { color: #8ea2c8; font-size: 13px; margin-bottom: 10rpx; }
+.detail-sec { margin-top: 14rpx; }
+.detail-sec-title { display: block; font-size: 15px; font-weight: 800; color: #ffe600; margin-bottom: 8rpx; }
+.ing-item {
+  display: inline-block; margin: 0 8rpx 8rpx 0; padding: 6rpx 16rpx;
+  border-radius: 999rpx; font-size: 13px; color: #dceaff;
+  background: rgba(0,240,255,.08); border: 1rpx solid rgba(0,240,255,.25);
+}
+.prep-item { font-size: 13px; color: #dceaff; line-height: 1.8; margin-bottom: 4rpx; }
+.detail-step { display: flex; align-items: flex-start; margin-bottom: 10rpx; }
+.detail-step-num {
+  flex-shrink: 0; width: 34rpx; height: 34rpx; margin-right: 12rpx;
+  border-radius: 50%; text-align: center; line-height: 34rpx;
+  background: linear-gradient(135deg,#00f0ff,#b026ff); color: #0a0e1a; font-weight: 800; font-size: 13px;
+}
+.detail-step-text { flex: 1; font-size: 13px; color: #dceaff; line-height: 1.7; }
+.detail-tips {
+  padding: 14rpx; border-radius: 10rpx; font-size: 13px; line-height: 1.8; color: #b8ffe0;
+  background: rgba(0,240,160,.08); border: 1rpx solid rgba(0,240,160,.35);
+}
+@keyframes dishIn { 0% { transform: translateY(8px); opacity: 0; } 100% { transform: translateY(0); opacity: 1; } }

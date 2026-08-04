@@ -8,7 +8,7 @@
   var isDemo = !CLOUD_ENV_ID || CLOUD_ENV_ID === 'YOUR_ENV_ID';
 
   var cloudApp = null;
-var state = { recipe: null, recordId: '', rated: false, generating: false, styleId: 'classic', mode: 'weird', player: null, styles: [], rankData: [], rankTag: '全部', posterSkin: 'normal', challengeId: '' };
+var state = { recipe: null, recordId: '', rated: false, generating: false, styleId: 'classic', mode: 'weird', player: null, styles: [], rankData: [], rankTag: '全部', posterSkin: 'normal', challengeId: '', detailRecipe: null };
 
   function $(id) { return document.getElementById(id); }
   var els = {
@@ -57,7 +57,12 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     pointsLine: $('pointsLine'),
     challengeBtn: $('challengeBtn'),
     challengeBanner: $('challengeBanner'),
-    acceptChallengeBtn: $('acceptChallengeBtn')
+    acceptChallengeBtn: $('acceptChallengeBtn'),
+    libBadge: $('libBadge'),
+    detailBtn: $('detailBtn'),
+    detailModal: $('detailModal'),
+    detailModalClose: $('detailModalClose'),
+    detailBody: $('detailBody')
   };
 
   /* ===== 工具 ===== */
@@ -75,7 +80,8 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
   function initCloud() {
     if (isDemo || typeof cloudbase === 'undefined') return Promise.resolve(false);
     try {
-      cloudApp = cloudbase.init({ env: CLOUD_ENV_ID, region: CLOUD_REGION });
+      // timeout: 60s —— AI 生成（qwen3.5-flash）偶尔超过 SDK 默认 15s，避免请求被中断
+      cloudApp = cloudbase.init({ env: CLOUD_ENV_ID, region: CLOUD_REGION, timeout: 60000 });
       var auth = cloudApp.auth();
       var signInPromise;
       if (auth && typeof auth.signInAnonymously === 'function') {
@@ -457,6 +463,10 @@ recognition.interimResults = true;
     els.stepsToggle.classList.remove('open');
     els.warningToggle.classList.remove('open');
     els.dishIngredients.textContent = '食材：' + ingredients;
+    var hasDetail = recipe.lib || (Array.isArray(recipe.ings) && recipe.ings.length);
+    els.libBadge.classList.toggle('hidden', !recipe.lib);
+    els.detailBtn.classList.toggle('hidden', !hasDetail);
+    if (hasDetail) state.detailRecipe = recipe;
     renderSteps(recipe);
     els.plating.textContent = '“' + recipe.plating + '”';
     els.warning.textContent = recipe.warning;
@@ -467,6 +477,10 @@ recognition.interimResults = true;
 
   /* ===== 演示模式兜底 ===== */
   function demoRecipe(ingredients) {
+    // 正常家常模式：优先从内置菜谱库（206 道家常菜）出菜
+    if (state.mode === 'normal' && window.NORMAL_RECIPES) {
+      return window.NORMAL_RECIPES.getNormalAppRecipe(ingredients);
+    }
     var pool = [
       {
         name: '主厨的倔强炒饭',
@@ -1034,6 +1048,101 @@ recognition.interimResults = true;
   els.rankModalClose.addEventListener('click', closeRankModal);
   els.rankModal.addEventListener('click', function (e) {
     if (e.target === els.rankModal || e.target.classList.contains('rank-modal-backdrop')) closeRankModal();
+  });
+
+  /* ===== 详细菜单制作界面（内置菜谱库） ===== */
+  function secTitle(text) {
+    var h = document.createElement('h4');
+    h.className = 'detail-sec-title';
+    h.textContent = text;
+    return h;
+  }
+  function renderDetail(recipe) {
+    if (!recipe) return;
+    els.detailBody.textContent = '';
+
+    var head = document.createElement('div');
+    head.className = 'detail-head';
+    var dn = document.createElement('div');
+    dn.className = 'detail-name';
+    dn.textContent = recipe.name;
+    var dm = document.createElement('div');
+    dm.className = 'detail-meta';
+    dm.textContent = [recipe.scene, recipe.time ? '⏱️ 约 ' + recipe.time + ' 分钟' : '', recipe.desc].filter(Boolean).join(' · ');
+    head.appendChild(dn);
+    head.appendChild(dm);
+    els.detailBody.appendChild(head);
+
+    if (Array.isArray(recipe.ings) && recipe.ings.length) {
+      var sec = document.createElement('div');
+      sec.className = 'detail-sec';
+      sec.appendChild(secTitle('🧺 食材清单'));
+      var ul = document.createElement('ul');
+      ul.className = 'detail-ings';
+      recipe.ings.forEach(function (ing) {
+        var li = document.createElement('li');
+        li.textContent = ing;
+        ul.appendChild(li);
+      });
+      sec.appendChild(ul);
+      els.detailBody.appendChild(sec);
+    }
+
+    if (Array.isArray(recipe.prep) && recipe.prep.length) {
+      var sec2 = document.createElement('div');
+      sec2.className = 'detail-sec';
+      sec2.appendChild(secTitle('🔪 备菜准备'));
+      var ul2 = document.createElement('ul');
+      ul2.className = 'detail-prep';
+      recipe.prep.forEach(function (p) {
+        var li = document.createElement('li');
+        li.textContent = p;
+        ul2.appendChild(li);
+      });
+      sec2.appendChild(ul2);
+      els.detailBody.appendChild(sec2);
+    }
+
+    if (Array.isArray(recipe.steps) && recipe.steps.length) {
+      var sec3 = document.createElement('div');
+      sec3.className = 'detail-sec';
+      sec3.appendChild(secTitle('👨‍🍳 分步做法'));
+      var ol = document.createElement('ol');
+      ol.className = 'detail-steps';
+      recipe.steps.forEach(function (s) {
+        var li = document.createElement('li');
+        li.textContent = s;
+        ol.appendChild(li);
+      });
+      sec3.appendChild(ol);
+      els.detailBody.appendChild(sec3);
+    }
+
+    if (recipe.tips) {
+      var sec4 = document.createElement('div');
+      sec4.className = 'detail-sec';
+      sec4.appendChild(secTitle('💡 主厨小贴士'));
+      var tips = document.createElement('p');
+      tips.className = 'detail-tips';
+      tips.textContent = recipe.tips;
+      sec4.appendChild(tips);
+      els.detailBody.appendChild(sec4);
+    }
+
+    els.detailModal.classList.remove('hidden');
+  }
+  function closeDetailModal() {
+    els.detailModal.classList.add('hidden');
+  }
+  els.detailBtn.addEventListener('click', function () {
+    renderDetail(state.detailRecipe || state.recipe);
+  });
+  els.detailModalClose.addEventListener('click', closeDetailModal);
+  els.detailModal.addEventListener('click', function (e) {
+    if (e.target === els.detailModal || e.target.classList.contains('detail-modal-backdrop')) closeDetailModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !els.detailModal.classList.contains('hidden')) closeDetailModal();
   });
 
   function renderRankTabs() {

@@ -1,5 +1,5 @@
 const { callFn } = require('../../utils/cloud');
-const { BADGES, buildLoadingLines, flyingEmojis } = require('../../utils/game');
+const { BADGES, buildLoadingLines, flyingEmojis, demoNormalRecipe } = require('../../utils/game');
 const app = getApp();
 
 Page({
@@ -127,7 +127,17 @@ Page({
     callFn('generateRecipe', { action: 'generate', ingredients, style: this.data.styleId, mode: this.data.mode }).then((r) => {
       this.stopPotText();
       this.setData({ generating: false });
-      if (!r.success) { wx.showToast({ title: r.error || '生成失败', icon: 'none' }); return; }
+      if (!r.success) {
+        // 正常家常模式：桥接失败时用本地菜谱库兜底（206 道家常菜）
+        if (this.data.mode === 'normal') {
+          const g = app.globalData;
+          g.recipe = demoNormalRecipe(ingredients);
+          g.recordId = '';
+          wx.showToast({ title: '网络开小差，先上一份家常菜', icon: 'none' });
+          wx.navigateTo({ url: '/pages/create/create?tag=' + encodeURIComponent('硬核养生') });
+          return;
+        }
+        wx.showToast({ title: r.error || '生成失败', icon: 'none' }); return; }
       const g = app.globalData;
       g.recipe = r.data.recipe;
       g.recordId = r.data.recordId;

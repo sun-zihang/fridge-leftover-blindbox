@@ -1,3 +1,6 @@
+// 内置家常菜谱库（206 道，蒸馏自「厨房小课堂」）
+const NR = require('./normalRecipes');
+
 // 与云函数 generateRecipe 对齐的常量（纯逻辑，便于页面使用）
 const STYLES = [
   { id: 'classic',   name: '经典深夜食堂',      cost: 0,   tagline: '最原汁原味的作死配方' },
@@ -106,6 +109,13 @@ function demoRecipe(ingredients) {
 }
 
 
+// 正常家常模式演示/兜底：从内置菜谱库按食材出菜（带详细菜单字段）
+function demoNormalRecipe(ingredients) {
+  return NR.getNormalAppRecipe(ingredients);
+}
+
+
+
 // ===== 食材识别：让动画/文案更贴合用户输入的菜 =====
 const INGREDIENT_EMOJI = {
   '洋葱':'🧅','泡面':'🍜','面':'🍜','面条':'🍜','可乐':'🥤','汽水':'🥤','雪碧':'🥤','土豆':'🥔','番茄':'🍅','西红柿':'🍅','鸡蛋':'🥚','蛋':'🥚','香蕉':'🍌','牛奶':'🥛','酸奶':'🥛','芝士':'🧀','奶酪':'🧀','肉':'🥩','五花肉':'🥓','鸡':'🍗','鸭':'🦆','鱼':'🐟','虾':'🦐','蟹':'🦀','米饭':'🍚','饭':'🍚','青菜':'🥬','白菜':'🥬','萝卜':'🥕','胡萝卜':'🥕','玉米':'🌽','黄瓜':'🥒','茄子':'🍆','辣椒':'🌶️','蒜':'🧄','花生':'🥜','苹果':'🍎','梨':'🍐','橙':'🍊','芒果':'🥭','草莓':'🍓','西瓜':'🍉','葡萄':'🍇','桃':'🍑','柠檬':'🍋','菠萝':'🍍','椰':'🥥','茶':'🍵','咖啡':'☕','啤酒':'🍺','汤圆':'🍡','饺子':'🥟','面包':'🍞','汉堡':'🍔','披萨':'🍕','薯条':'🍟','蛋糕':'🍰','巧克力':'🍫','冰淇淋':'🍦','年糕':'','馒头':'','包子':'','豆腐':'','海带':'','木耳':'','蘑菇':'🍄','西兰花':'🥦','南瓜':'🎃','红薯':'🍠','山药':''
@@ -184,5 +194,5 @@ function flyingEmojis(ingredientsText) {
 }
 
 
-module.exports = { STYLES, RANK_TAGS, BADGES, LOADING_LINES, demoRecipe, parseIngredients, buildLoadingLines, flyingEmojis };
+module.exports = { STYLES, RANK_TAGS, BADGES, LOADING_LINES, demoRecipe, demoNormalRecipe, NORMAL_RECIPES: NR, matchNormalRecipe: NR.matchNormalRecipe, getNormalAppRecipe: NR.getNormalAppRecipe, parseIngredients, buildLoadingLines, flyingEmojis };
 

@@ -101,6 +101,7 @@
       <h2 id="dishName" class="dish-name neon-pink"></h2>
       <p id="dishIngredients" class="dish-ingredients"></p>
       <p id="pointsLine" class="points-line hidden"></p>
+      <p id="libBadge" class="lib-badge hidden">📖 家常菜谱库精选</p>
 
       <button id="stepsToggle" class="section-toggle" type="button"><span>👨‍🍳 轻触查看做法</span><span class="chev">▾</span></button>
       <div id="stepsWrap" class="collapsible hidden">
@@ -113,6 +114,8 @@
 
       <button id="warningToggle" class="section-toggle" type="button"><span>⚠️ 轻触查看主厨警告</span><span class="chev">▾</span></button>
       <p id="warning" class="warning hidden"></p>
+
+      <button id="detailBtn" class="detail-btn hidden" type="button">📖 查看完整菜单</button>
 
       <div class="rate-row">
         <span class="rate-title">这菜你觉得？</span>
@@ -148,6 +151,14 @@
   </footer>
   </div>
 
+  <div id="detailModal" class="detail-modal hidden">
+    <div class="detail-modal-backdrop"></div>
+    <div class="detail-modal-card">
+      <button id="detailModalClose" class="detail-modal-close" type="button" aria-label="关闭">×</button>
+      <div id="detailBody" class="detail-body"></div>
+    </div>
+  </div>
+
   <div id="rankModal" class="rank-modal hidden">
     <div class="rank-modal-backdrop"></div>
     <div class="rank-modal-card">
@@ -163,6 +174,7 @@
   <div id="toast" class="toast hidden"></div>
 
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.17.3/cloudbase.full.js"></script>
+  <script src="./normalRecipes.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>

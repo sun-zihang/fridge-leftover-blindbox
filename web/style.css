@@ -462,3 +462,62 @@ html, body {
 .mode-switch { display: inline-flex; background: rgba(255,255,255,.05); border-radius: 999px; padding: 3px; }
 .mode-btn { border: none; background: none; color: #9db1d4; font-size: 13px; padding: 6px 16px; border-radius: 999px; cursor: pointer; font-family: inherit; }
 .mode-btn.active { background: linear-gradient(135deg,#00f0ff,#b026ff); color: #0a0e1a; font-weight: 800; }
+
+
+/* ===== 家常菜谱库徽标 ===== */
+.lib-badge {
+  display: inline-block; margin: 6px auto 0; padding: 3px 14px;
+  border-radius: 999px; font-size: 12px; font-weight: 700;
+  color: #ffe600; background: rgba(255,230,0,.1);
+  border: 1px solid rgba(255,230,0,.4);
+  width: fit-content;
+}
+
+/* ===== 详细菜单按钮 ===== */
+.detail-btn {
+  width: 100%; margin-top: 14px;
+  padding: 13px 0; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(0,240,255,.16), rgba(176,38,255,.16));
+  border: 1px solid rgba(0,240,255,.45);
+  color: #00f0ff; font-size: 15px; font-weight: 800;
+  cursor: pointer; font-family: inherit;
+  transition: transform .15s, box-shadow .15s;
+}
+.detail-btn:hover { transform: translateY(-1px); box-shadow: 0 0 18px rgba(0,240,255,.25); }
+
+/* ===== 详细菜单弹层 ===== */
+.detail-modal {
+  position: fixed; inset: 0; z-index: 110;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.detail-modal-backdrop { position: absolute; inset: 0; background: rgba(5,8,18,.88); backdrop-filter: blur(4px); }
+.detail-modal-card {
+  position: relative; width: 100%; max-width: 540px; max-height: 86vh; overflow-y: auto;
+  padding: 34px 26px 26px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, #1b1038, #0d1230);
+  border: 2px solid rgba(0,240,255,.4);
+  box-shadow: 0 0 50px rgba(0,240,255,.3);
+  text-align: left;
+  animation: dishIn .35s ease-out;
+}
+.detail-modal-close {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: none; color: #8ea2c8; font-size: 26px; cursor: pointer; line-height: 1;
+}
+.detail-modal-close:hover { color: #ff2d78; }
+.detail-head { text-align: center; padding-bottom: 12px; border-bottom: 1px dashed rgba(0,240,255,.25); }
+.detail-name { font-size: 26px; font-weight: 900; color: #00f0ff; text-shadow: 0 0 16px rgba(0,240,255,.5); }
+.detail-meta { margin-top: 6px; color: #8ea2c8; font-size: 12px; line-height: 1.7; }
+.detail-sec { margin-top: 18px; }
+.detail-sec-title { margin: 0 0 8px; font-size: 15px; font-weight: 800; color: #ffe600; }
+.detail-ings, .detail-prep, .detail-steps { margin: 0; padding-left: 20px; color: #dceaff; font-size: 14px; line-height: 1.9; }
+.detail-ings li, .detail-prep li, .detail-steps li { margin-bottom: 4px; }
+.detail-tips {
+  margin: 0; padding: 10px 12px; border-radius: 10px;
+  background: rgba(0,240,160,.08); border: 1px solid rgba(0,240,160,.35);
+  color: #b8ffe0; font-size: 13px; line-height: 1.8;
+}
+@media (max-width: 420px) {
+  .detail-modal-card { padding: 30px 18px 22px; }
+}

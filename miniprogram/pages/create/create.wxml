@@ -12,6 +12,7 @@
   <!-- 结果 -->
   <view class="result" wx:if="{{recipe}}">
     <view class="dish-name neon">{{recipe.name}}</view>
+    <view class="lib-badge" wx:if="{{recipe.lib}}">📖 家常菜谱库精选</view>
     <view class="points-line" wx:if="{{pointsLine}}">{{pointsLine}}</view>
     <view class="dish-ingredients" wx:if="{{ingredients}}">食材：{{ingredients}}</view>
 
@@ -39,6 +40,36 @@
       <text>⚠️ 轻触查看主厨警告</text><text class="chev {{warningOpen ? 'open' : ''}}">▾</text>
     </view>
     <view class="warning" wx:if="{{warningOpen}}">{{recipe.warning}}</view>
+
+    <!-- 详细菜单制作界面（内置菜谱库） -->
+    <view class="detail-toggle" wx:if="{{recipe.ings}}" bindtap="toggleDetail" hover-class="tap-hover">
+      <text>📖 查看完整菜单</text><text class="chev {{detailOpen ? 'open' : ''}}">▾</text>
+    </view>
+    <view class="detail-panel" wx:if="{{detailOpen}}">
+      <view class="detail-meta" wx:if="{{recipe.scene || recipe.time}}">
+        <text wx:if="{{recipe.scene}}">{{recipe.scene}}</text>
+        <text wx:if="{{recipe.time}}"> · ⏱️ 约 {{recipe.time}} 分钟</text>
+      </view>
+      <view class="detail-sec" wx:if="{{recipe.ings.length}}">
+        <view class="detail-sec-title">🧺 食材清单</view>
+        <view class="ing-item" wx:for="{{recipe.ings}}" wx:key="*this">{{item}}</view>
+      </view>
+      <view class="detail-sec" wx:if="{{recipe.prep.length}}">
+        <view class="detail-sec-title">🔪 备菜准备</view>
+        <view class="prep-item" wx:for="{{recipe.prep}}" wx:key="*this">• {{item}}</view>
+      </view>
+      <view class="detail-sec" wx:if="{{recipe.steps.length}}">
+        <view class="detail-sec-title">👨‍🍳 分步做法</view>
+        <view class="detail-step" wx:for="{{recipe.steps}}" wx:key="index">
+          <text class="detail-step-num">{{index + 1}}</text>
+          <text class="detail-step-text">{{item.text}}</text>
+        </view>
+      </view>
+      <view class="detail-sec" wx:if="{{recipe.tips}}">
+        <view class="detail-sec-title">💡 主厨小贴士</view>
+        <view class="detail-tips">{{recipe.tips}}</view>
+      </view>
+    </view>
 
     <view class="rate-row">
       <text class="rate-title">这菜你觉得？</text>

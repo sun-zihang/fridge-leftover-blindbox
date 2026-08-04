@@ -8,6 +8,7 @@ Page({
     recordId: '',
     pointsLine: '',
     stepsOpen: false,
+    detailOpen: false,
     warningOpen: false,
     stepEmojis: ['🔪', '🔥', '🍳', '🧂', '✨', '🍜'],
     posterBtnText: '生成朋友圈打卡海报 📸',
@@ -41,6 +42,7 @@ Page({
   },
 
   toggleSteps() { this.setData({ stepsOpen: !this.data.stepsOpen }); },
+  toggleDetail() { this.setData({ detailOpen: !this.data.detailOpen }); },
   toggleWarning() { this.setData({ warningOpen: !this.data.warningOpen }); },
   flipStep(e) {
     const idx = e.currentTarget.dataset.index;
