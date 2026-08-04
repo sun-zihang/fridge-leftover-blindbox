@@ -3,7 +3,7 @@
   'use strict';
 
   /* ===== 配置 ===== */
-  var CLOUD_ENV_ID = 'YOUR_ENV_ID';   // TODO: 替换为你的云开发环境 ID
+  var CLOUD_ENV_ID = 'a455-d3g2s3dt865d86640';   // 云开发环境 ID（已配置，换环境时修改）
   var CLOUD_REGION = 'ap-shanghai';   // 环境地域
   var isDemo = !CLOUD_ENV_ID || CLOUD_ENV_ID === 'YOUR_ENV_ID';
 

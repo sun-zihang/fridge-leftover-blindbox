@@ -46,7 +46,7 @@ python -m http.server 8000
 编辑 `web/app.js` 顶部：
 
 ```js
-var CLOUD_ENV_ID = 'YOUR_ENV_ID';   // 改为你的云开发环境 ID
+var CLOUD_ENV_ID = 'a455-d3g2s3dt865d86640';   // 当前已配置为线上环境 ID（换环境时修改）
 var CLOUD_REGION = 'ap-shanghai';   // 环境地域（与云函数一致）
 ```
 

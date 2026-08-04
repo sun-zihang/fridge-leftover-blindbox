@@ -58,23 +58,49 @@ async function generate(ingredients) {
   return { recipe: recipe, fallback: false, lastError: lastError };
 }
 
-// 红黑榜：查询已评价的菜谱（真香 / 已进医院），按生成时间倒序取前 20 条
+// 红黑榜：取最近 100 条，JS 端过滤已评价（真香 / 已进医院）并按 create_time 倒序取前 20 条。
+// 说明：该环境 node-sdk 读取文档时返回 { _id, data: {...} }（字段未自动解包），
+//       直接按顶层字段过滤/排序会拿到 undefined，因此这里先统一解包 data 再处理。
 async function listRank() {
   const res = await db.collection('recipes')
-    .where({ user_rating: db.command.in(['真香', '已进医院']) })
-    .orderBy('create_time', 'desc')
-    .limit(20)
+    .limit(100)
     .get();
 
-  return (res.data || []).map(function (r) {
-    const rd = r.recipe_data || {};
+  const rated = (res.data || [])
+    .map(function (r) {
+      const d = r && r.data && typeof r.data === 'object' ? r.data : r;
+      return d;
+    })
+    .filter(function (d) {
+      return d.user_rating === '真香' || d.user_rating === '已进医院';
+    })
+    .sort(function (a, b) {
+      const ta = a.create_time ? new Date(a.create_time).getTime() : 0;
+      const tb = b.create_time ? new Date(b.create_time).getTime() : 0;
+      return tb - ta;
+    });
+
+  return rated.slice(0, 20).map(function (d) {
+    const rd = d.recipe_data || {};
     return {
       name: typeof rd.name === 'string' && rd.name ? rd.name : '未命名料理',
-      rating: typeof r.user_rating === 'string' ? r.user_rating : '',
+      rating: typeof d.user_rating === 'string' ? d.user_rating : '',
       warning: typeof rd.warning === 'string' ? rd.warning : '',
-      ingredients: typeof r.ingredients === 'string' ? r.ingredients : ''
+      ingredients: typeof d.ingredients === 'string' ? d.ingredients : ''
     };
   });
+}
+
+// 确保 recipes 集合存在（幂等：已存在时报错忽略，避免每次查询/写入前手动建集合）
+async function ensureRecipesCollection() {
+  try {
+    await db.createCollection('recipes');
+  } catch (err) {
+    const msg = (err && err.message) ? String(err.message) : String(err);
+    if (msg.indexOf('exist') < 0) {
+      throw err;
+    }
+  }
 }
 
 exports.main = async (event) => {
@@ -95,6 +121,7 @@ exports.main = async (event) => {
 
     // 动作：listRank（红黑榜查询）
     if (action === 'listRank') {
+      await ensureRecipesCollection();
       const data = await listRank();
       return { success: true, data: data };
     }
@@ -104,6 +131,8 @@ exports.main = async (event) => {
     if (!ingredients) {
       return { success: false, error: '食材不能为空' };
     }
+
+    await ensureRecipesCollection();
 
     const generated = await generate(ingredients);
 

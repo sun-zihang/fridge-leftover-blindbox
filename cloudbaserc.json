@@ -1,0 +1,14 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "envId": "a455-d3g2s3dt865d86640",
+  "functionRoot": "cloudfunctions",
+  "functions": [
+    {
+      "name": "generateRecipe",
+      "timeout": 120,
+      "memorySize": 512,
+      "runtime": "Nodejs20.19",
+      "handler": "index.main"
+    }
+  ]
+}
