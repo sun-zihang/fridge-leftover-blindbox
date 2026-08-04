@@ -18,6 +18,8 @@
       <textarea id="ingredients" maxlength="200" rows="3" placeholder="例如：半个洋葱、两包泡面、一瓶可乐"></textarea>
       <div class="input-footer">
         <button id="micBtn" class="mic-btn hidden" type="button">🎙️ 语音输入</button>
+        <span id="micWave" class="mic-wave hidden" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
+        <span id="micHint" class="mic-hint hidden">正在聆听，说出你的剩菜…</span>
         <span id="charCount" class="char-count">0/200</span>
       </div>
     </section>
@@ -25,11 +27,19 @@
     <button id="genBtn" class="generate-btn" type="button">召唤主厨 👨‍🍳</button>
 
     <div id="potLoading" class="pot-loading hidden">
-      <div class="pot">🍲</div>
-      <span class="bubble b1"></span>
-      <span class="bubble b2"></span>
-      <span class="bubble b3"></span>
-      <p class="pot-text">AI 主厨正在脑暴你的剩菜…</p>
+      <div class="pot-scene">
+        <div class="pot">🍲</div>
+        <span class="ing i1">🥔</span>
+        <span class="ing i2">🌽</span>
+        <span class="ing i3">🥕</span>
+        <span class="ing i4">🍜</span>
+        <span class="bubble b1"></span>
+        <span class="bubble b2"></span>
+        <span class="bubble b3"></span>
+        <span class="steam s1"></span>
+        <span class="steam s2"></span>
+      </div>
+      <p id="potText" class="pot-text">AI 主厨正在脑暴你的剩菜…</p>
     </div>
 
     <div id="result" class="result hidden">
@@ -38,6 +48,7 @@
 
       <h3 class="section-title">👨‍🍳 做法</h3>
       <ol id="steps" class="steps"></ol>
+      <p id="flipHint" class="flip-hint">👆 轻触步骤卡片翻面查看</p>
 
       <h3 class="section-title">🍽️ 摆盘建议</h3>
       <p id="plating" class="plating"></p>
@@ -75,6 +86,18 @@
     <br>
     <a class="source-link" href="https://github.com/sun-zihang/fridge-leftover-blindbox" target="_blank" rel="noopener">🔗 源码 GitHub</a>
   </footer>
+  </div>
+
+  <div id="rankModal" class="rank-modal hidden">
+    <div class="rank-modal-backdrop"></div>
+    <div class="rank-modal-card">
+      <button id="rankModalClose" class="rank-modal-close" type="button" aria-label="关闭">×</button>
+      <div id="rankModalEmoji" class="rank-modal-emoji"></div>
+      <div id="rankModalDish" class="rank-modal-dish"></div>
+      <div id="rankModalTag" class="rank-modal-tag tag-good"></div>
+      <p id="rankModalComment" class="rank-modal-comment"></p>
+      <p class="rank-modal-foot">🔥 来自冰箱剩菜盲盒 · 深夜食堂战报</p>
+    </div>
   </div>
 
   <div id="toast" class="toast hidden"></div>

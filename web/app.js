@@ -15,12 +15,16 @@
     ingredients: $('ingredients'),
     charCount: $('charCount'),
     micBtn: $('micBtn'),
+    micWave: $('micWave'),
+    micHint: $('micHint'),
     genBtn: $('genBtn'),
     potLoading: $('potLoading'),
+    potText: $('potText'),
     result: $('result'),
     dishName: $('dishName'),
     dishIngredients: $('dishIngredients'),
     steps: $('steps'),
+    flipHint: $('flipHint'),
     plating: $('plating'),
     warning: $('warning'),
     posterBtn: $('posterBtn'),
@@ -30,7 +34,13 @@
     saveBtn: $('saveBtn'),
     sharePosterBtn: $('sharePosterBtn'),
     toast: $('toast'),
-    rankList: $('rankList')
+    rankList: $('rankList'),
+    rankModal: $('rankModal'),
+    rankModalClose: $('rankModalClose'),
+    rankModalEmoji: $('rankModalEmoji'),
+    rankModalDish: $('rankModalDish'),
+    rankModalTag: $('rankModalTag'),
+    rankModalComment: $('rankModalComment')
   };
 
   /* ===== 工具 ===== */
@@ -84,11 +94,21 @@
     els.micBtn.classList.remove('hidden');
     recognition = new SpeechRec();
     recognition.lang = 'zh-CN';
-    recognition.interimResults = false;
+recognition.interimResults = true;
     recognition.onresult = function (e) {
-      var t = '';
-      for (var i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
-      appendVoice(t.trim());
+      var finalText = '';
+      var interimText = '';
+      for (var i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) { finalText += e.results[i][0].transcript; }
+        else { interimText += e.results[i][0].transcript; }
+      }
+      if (interimText) {
+        els.micHint.textContent = '正在听你说：' + interimText;
+        els.micHint.classList.remove('hidden');
+      } else if (finalText) {
+        els.micHint.classList.add('hidden');
+        appendVoice(finalText.trim());
+      }
     };
     recognition.onerror = function (e) { toast('语音识别失败: ' + (e.error || 'unknown')); setMic(false); };
     recognition.onend = function () { setMic(false); };
@@ -100,8 +120,11 @@
   }
   function setMic(on) {
     recognition.recognizing = on;
-    els.micBtn.textContent = on ? '⏹ 松手结束' : '🎙️ 语音输入';
+    els.micBtn.textContent = on ? '🔊 点击结束' : '🎙️ 语音输入';
     els.micBtn.classList.toggle('active', on);
+    els.micWave.classList.toggle('hidden', !on);
+    els.micHint.classList.toggle('hidden', !on);
+    if (on) els.micHint.textContent = '正在聆听，说出你的剩菜…';
   }
   function appendVoice(t) {
     if (!t) return;
@@ -112,6 +135,32 @@
 
   /* ===== 生成 ===== */
   els.genBtn.addEventListener('click', generate);
+
+  /* ===== 等待动画：趣味文案轮播 ===== */
+  var LOADING_LINES = [
+    'AI 主厨正在和泡面进行灵魂搏斗…',
+    '可乐和洋葱正在谈判，气氛一度很紧张…',
+    '冰箱深处传来神秘的咕噜声…',
+    '主厨决定让鸡蛋和酸奶先和解…',
+    '正在把黑暗料理往“能吃”的方向硬拽…',
+    '泡面已经就位，就差一个大胆的创意…'
+  ];
+  var potTimer = null;
+  function startPotShow() {
+    startPotShow();
+    els.potText.textContent = LOADING_LINES[0];
+    var idx = 0;
+    if (potTimer) clearInterval(potTimer);
+    potTimer = setInterval(function () {
+      idx = (idx + 1) % LOADING_LINES.length;
+      els.potText.textContent = LOADING_LINES[idx];
+    }, 1800);
+  }
+  function stopPotShow() {
+    if (potTimer) { clearInterval(potTimer); potTimer = null; }
+    stopPotShow();
+  }
+
 
   function generate() {
     var text = els.ingredients.value.trim();
@@ -141,7 +190,7 @@
         state.generating = false;
         els.genBtn.disabled = false;
         els.genBtn.textContent = '召唤主厨 👨‍🍳';
-        els.potLoading.classList.add('hidden');
+        stopPotShow();
         var msg = (err && err.message) ? err.message : '生成失败，请稍后重试';
         if (msg.indexOf('PERMISSION_DENIED') >= 0) {
           msg = '云函数权限未开启：请在控制台为 generateRecipe 开启「所有用户可调用」';
@@ -164,17 +213,47 @@
     els.dishName.textContent = recipe.name;
     els.dishIngredients.textContent = '食材：' + ingredients;
     els.steps.innerHTML = '';
+    var stepEmojis = ['🔪', '🔥', '🍳', '🧂', '✨', '🍜'];
     (recipe.steps || []).forEach(function (s, i) {
       var li = document.createElement('li');
+      li.className = 'step-card';
+      li.tabIndex = 0;
+      li.setAttribute('role', 'button');
+      li.setAttribute('aria-label', '步骤 ' + (i + 1) + '，点击翻面');
+
+      var inner = document.createElement('div');
+      inner.className = 'step-inner';
+
+      var front = document.createElement('div');
+      front.className = 'step-face step-front';
       var num = document.createElement('span');
       num.className = 'step-num';
       num.textContent = i + 1;
-      var txt = document.createElement('span');
-      txt.textContent = s;
-      li.appendChild(num);
-      li.appendChild(txt);
+      var emoji = document.createElement('span');
+      emoji.className = 'step-emoji';
+      emoji.textContent = stepEmojis[i % stepEmojis.length];
+      var hint = document.createElement('span');
+      hint.className = 'step-flip-hint';
+      hint.textContent = '轻触翻面';
+      front.appendChild(num);
+      front.appendChild(emoji);
+      front.appendChild(hint);
+
+      var back = document.createElement('div');
+      back.className = 'step-face step-back';
+      back.textContent = s;
+
+      inner.appendChild(front);
+      inner.appendChild(back);
+      li.appendChild(inner);
+      li.addEventListener('click', function () { li.classList.toggle('flipped'); });
+      li.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); li.classList.toggle('flipped'); }
+      });
       els.steps.appendChild(li);
     });
+    if (recipe.steps && recipe.steps.length) { els.flipHint.classList.remove('hidden'); }
+    else { els.flipHint.classList.add('hidden'); }
     els.plating.textContent = '“' + recipe.plating + '”';
     els.warning.textContent = recipe.warning;
     els.result.classList.remove('hidden');
@@ -257,6 +336,11 @@
     ctx.textAlign = 'center';
     ctx.fillText('AI 深夜食堂 · 今日盲盒菜谱', W / 2, 96);
     glowText(ctx, '冰箱剩菜盲盒', W / 2, 170, '56px sans-serif', '#00f0ff', 24);
+    // 社交引导语：激发好奇心
+    ctx.fillStyle = '#ffe600';
+    ctx.font = 'italic 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('“我让 AI 用冰箱剩菜做了顿饭，结果…”', W / 2, 235);
     glowText(ctx, recipe.name, W / 2, 300, 'bold 64px sans-serif', '#ff2d78', 30);
 
     if (ingredients) {
@@ -311,10 +395,13 @@
     ctx.fillStyle = '#00f0ff';
     ctx.font = 'bold 32px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('🍲 冰箱剩菜盲盒', W / 2, H - 100);
+    ctx.fillText('🍲 冰箱剩菜盲盒 · AI 深夜食堂', W / 2, H - 118);
+    ctx.fillStyle = '#00f0a0';
+    ctx.font = 'italic 26px sans-serif';
+    ctx.fillText('围观更多黑暗料理战报，一起整活', W / 2, H - 78);
     ctx.fillStyle = '#6b7f9e';
     ctx.font = '22px sans-serif';
-    ctx.fillText('长按保存 · 分享到朋友圈打卡', W / 2, H - 60);
+    ctx.fillText('长按保存 · 分享到朋友圈打卡', W / 2, H - 42);
   }
 
   function glowText(ctx, text, x, y, font, color, blur) {
@@ -495,8 +582,32 @@
       card.appendChild(comment);
       card.appendChild(tag);
       els.rankList.appendChild(card);
+      card.tabIndex = 0;
+      card.setAttribute('role', 'button');
+      card.addEventListener('click', function () { openRankModal(item); });
+      card.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRankModal(item); }
+      });
     });
   }
+
+  /* ===== 红黑榜：点击看大图 ===== */
+  function openRankModal(item) {
+    if (!item) return;
+    els.rankModalEmoji.textContent = item.emoji || '🍽️';
+    els.rankModalDish.textContent = item.dish || '';
+    els.rankModalTag.textContent = item.rating || '';
+    els.rankModalTag.className = 'rank-modal-tag ' + (item.rating === '已进医院' ? 'tag-bad' : 'tag-good');
+    els.rankModalComment.textContent = item.comment || '';
+    els.rankModal.classList.remove('hidden');
+  }
+  function closeRankModal() {
+    els.rankModal.classList.add('hidden');
+  }
+  els.rankModalClose.addEventListener('click', closeRankModal);
+  els.rankModal.addEventListener('click', function (e) {
+    if (e.target === els.rankModal || e.target.classList.contains('rank-modal-backdrop')) closeRankModal();
+  });
 
   initCloud().then(function (ready) {
     loadRank(ready);

@@ -227,3 +227,124 @@ html, body {
 }
 .tag-good { background: rgba(0, 240, 160, .15); color: #00f0a0; border: 1px solid rgba(0, 240, 160, .5); }
 .tag-bad { background: rgba(255, 45, 120, .15); color: #ff2d78; border: 1px solid rgba(255, 45, 120, .5); }
+
+
+/* ===== 语音输入：声波反馈 ===== */
+.mic-wave { display: inline-flex; align-items: flex-end; gap: 3px; height: 16px; margin-left: 4px; }
+.mic-wave i {
+  width: 3px; border-radius: 2px; background: #ff2d78;
+  animation: micWave 1s ease-in-out infinite;
+}
+.mic-wave i:nth-child(1) { animation-delay: 0s; }
+.mic-wave i:nth-child(2) { animation-delay: .15s; }
+.mic-wave i:nth-child(3) { animation-delay: .3s; }
+.mic-wave i:nth-child(4) { animation-delay: .45s; }
+.mic-wave i:nth-child(5) { animation-delay: .6s; }
+@keyframes micWave { 0%,100% { height: 4px; } 50% { height: 16px; } }
+.mic-hint { color: #ff2d78; font-size: 12px; margin-left: 8px; animation: micBlink 1.2s infinite; }
+
+/* ===== 等待动画：食材翻滚 + 蒸汽 ===== */
+.pot-scene { position: relative; width: 220px; height: 150px; }
+.pot { font-size: 72px; animation: potShake .7s infinite; position: relative; z-index: 2; }
+.ing {
+  position: absolute; font-size: 28px; z-index: 3;
+  animation: ingBounce 1.1s ease-in-out infinite;
+}
+.i1 { bottom: 34px; left: 44px; animation-delay: 0s; }
+.i2 { bottom: 40px; left: 96px; animation-delay: .25s; }
+.i3 { bottom: 30px; left: 142px; animation-delay: .5s; }
+.i4 { bottom: 44px; left: 172px; animation-delay: .75s; }
+@keyframes ingBounce {
+  0%,100% { transform: translateY(0) rotate(-10deg); }
+  50% { transform: translateY(-26px) rotate(12deg); }
+}
+.steam {
+  position: absolute; width: 10px; height: 26px; border-radius: 50%;
+  background: rgba(255,255,255,.35); filter: blur(3px);
+  animation: steamUp 1.6s infinite; opacity: 0;
+}
+.s1 { bottom: 96px; left: 78px; animation-delay: 0s; }
+.s2 { bottom: 100px; left: 128px; animation-delay: .8s; }
+@keyframes steamUp {
+  0% { transform: translateY(0) scale(.7); opacity: .7; }
+  100% { transform: translateY(-42px) scale(1.3); opacity: 0; }
+}
+.pot-text { margin-top: 10px; color: #8ea2c8; font-size: 14px; min-height: 22px; text-align: center; }
+
+/* ===== 结果仪式感：超大霓虹菜名 ===== */
+.dish-name {
+  font-size: 46px !important;
+  animation: neonFlicker 3.5s infinite, dishIn .6s ease-out;
+}
+@keyframes dishIn {
+  0% { transform: scale(.7); opacity: 0; }
+  60% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); }
+}
+
+/* ===== 步骤翻牌卡 ===== */
+.flip-hint { margin-top: 10px; color: #5b6c8c; font-size: 12px; text-align: center; }
+.step-card {
+  perspective: 900px;
+  margin-bottom: 12px;
+  cursor: pointer;
+  border-radius: 14px;
+}
+.step-inner {
+  position: relative; width: 100%; height: 96px;
+  transition: transform .5s;
+  transform-style: preserve-3d;
+}
+.step-card.flipped .step-inner { transform: rotateY(180deg); }
+.step-face {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center; gap: 12px;
+  border-radius: 14px;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  padding: 14px;
+  background: rgba(20,28,56,.75);
+  border: 2px solid rgba(0,240,255,.25);
+}
+.step-back {
+  transform: rotateY(180deg);
+  background: rgba(10,18,40,.95);
+  border-color: rgba(255,45,120,.45);
+  color: #dceaff; font-size: 14px; line-height: 1.7;
+  align-items: flex-start;
+  overflow-y: auto;
+}
+.step-emoji { font-size: 30px; }
+.step-flip-hint { font-size: 12px; color: #5b6c8c; }
+
+/* ===== 红黑榜：点击看大图 ===== */
+.rank-item { cursor: pointer; transition: transform .15s, border-color .15s; }
+.rank-item:hover, .rank-item:focus-visible { transform: translateY(-3px); border-color: rgba(255,45,120,.55); }
+.rank-modal {
+  position: fixed; inset: 0; z-index: 100;
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.rank-modal-backdrop { position: absolute; inset: 0; background: rgba(5,8,18,.85); backdrop-filter: blur(4px); }
+.rank-modal-card {
+  position: relative; width: 100%; max-width: 360px;
+  padding: 34px 24px 24px;
+  border-radius: 20px;
+  background: linear-gradient(160deg, #1b1038, #0d1230);
+  border: 2px solid rgba(0,240,255,.4);
+  box-shadow: 0 0 50px rgba(0,240,255,.3);
+  text-align: center;
+  animation: dishIn .35s ease-out;
+}
+.rank-modal-close {
+  position: absolute; top: 10px; right: 14px;
+  background: none; border: none; color: #8ea2c8; font-size: 26px; cursor: pointer; line-height: 1;
+}
+.rank-modal-close:hover { color: #ff2d78; }
+.rank-modal-emoji { font-size: 64px; }
+.rank-modal-dish { margin-top: 12px; font-size: 26px; font-weight: 900; color: #00f0ff; text-shadow: 0 0 16px rgba(0,240,255,.6); }
+.rank-modal-tag {
+  display: inline-block; margin-top: 12px; padding: 3px 14px;
+  border-radius: 999px; font-size: 13px; font-weight: 700;
+}
+.rank-modal-comment { margin-top: 16px; color: #dceaff; font-size: 14px; line-height: 1.8; text-align: left; }
+.rank-modal-foot { margin-top: 18px; color: #5b6c8c; font-size: 12px; }
