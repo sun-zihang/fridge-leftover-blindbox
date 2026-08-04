@@ -19,6 +19,7 @@ const db = app.database();
 
 const MODEL = 'deepseek-v4-flash';
 const CHALLENGE_BONUS = 20;
+const HTTP_TOKEN = 'fridge-blindbox-secret-2026'; // 小程序 HTTP 桥接共享密钥
 
 // 徽章规则
 const BADGES = {
@@ -46,6 +47,22 @@ function yesterdayOf(today) {
   const d = new Date(today + 'T00:00:00+08:00');
   d.setDate(d.getDate() - 1);
   return d.toISOString().slice(0, 10);
+}
+// HTTP 网关（HTTP access -> SCF）事件：body 是 JSON 字符串；SDK callFunction 事件保持原样
+function normalizeEvent(raw) {
+  if (!raw) return {};
+  if (raw.httpMethod || (raw.path && raw.headers)) {
+    let body = {};
+    try {
+      if (raw.isBase64Encoded) {
+        body = JSON.parse(Buffer.from(raw.body || '', 'base64').toString('utf8') || '{}');
+      } else if (raw.body) {
+        body = JSON.parse(raw.body);
+      }
+    } catch (e) { /* body 解析失败则用空对象 */ }
+    return Object.assign({}, body, { __viaHttp: true });
+  }
+  return raw;
 }
 function getUid(event) {
   // 显式 uid（CLI/自动化测试用，加前缀避免与真实 uid 冲突）
@@ -193,9 +210,13 @@ async function listRank(tag) {
 
 // ---------- 主入口 ----------
 
-exports.main = async (event) => {
+exports.main = async (rawEvent) => {
+  const event = normalizeEvent(rawEvent);
   const action = event && event.action;
   try {
+    if (event.__viaHttp && event.token !== HTTP_TOKEN) {
+      return { success: false, error: 'unauthorized' };
+    }
     const uid = getUid(event);
     await Promise.all([
       ensureCollection('recipes'),
