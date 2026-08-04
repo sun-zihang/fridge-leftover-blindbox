@@ -58,3 +58,40 @@ page { background: #0a0e1a; color: #e6f7ff; font-size: 15px; }
 }
 /* 触摸目标最小高度 */
 .generate-btn, .style-chip, .rank-tab { min-height: 44px; }
+
+
+/* ===== 召唤主厨后：烹饪小剧场 ===== */
+.pot-overlay {
+  position: fixed; left: 0; top: 0; right: 0; bottom: 0;
+  background: rgba(5,8,18,.92);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  z-index: 999;
+}
+.pot-scene { position: relative; width: 260rpx; height: 220rpx; }
+.pot { font-size: 96rpx; animation: potShake .7s infinite; position: relative; z-index: 2; text-align: center; }
+@keyframes potShake { 0%,100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+.ing { position: absolute; font-size: 40rpx; z-index: 3; animation: ingBounce 1.1s ease-in-out infinite; }
+.i1 { bottom: 60rpx; left: 20rpx; }
+.i2 { bottom: 72rpx; left: 92rpx; animation-delay: .25s; }
+.i3 { bottom: 52rpx; left: 160rpx; animation-delay: .5s; }
+.i4 { bottom: 76rpx; left: 204rpx; animation-delay: .75s; }
+@keyframes ingBounce {
+  0%,100% { transform: translateY(0) rotate(-12deg); }
+  50% { transform: translateY(-36rpx) rotate(14deg); }
+}
+.bubble { position: absolute; width: 16rpx; height: 16rpx; border-radius: 50%; background: rgba(0,240,255,.8); animation: bubbleUp 1.2s infinite; opacity: 0; }
+.b1 { bottom: 30rpx; left: 90rpx; }
+.b2 { bottom: 22rpx; left: 130rpx; width: 22rpx; height: 22rpx; animation-delay: .4s; }
+.b3 { bottom: 14rpx; left: 170rpx; animation-delay: .8s; }
+@keyframes bubbleUp {
+  0% { transform: translateY(0) scale(.6); opacity: .9; }
+  100% { transform: translateY(-140rpx) scale(1.2); opacity: 0; }
+}
+.steam { position: absolute; width: 14rpx; height: 34rpx; border-radius: 50%; background: rgba(255,255,255,.35); filter: blur(3px); animation: steamUp 1.6s infinite; opacity: 0; }
+.s1 { bottom: 130rpx; left: 84rpx; }
+.s2 { bottom: 136rpx; left: 150rpx; animation-delay: .8s; }
+@keyframes steamUp {
+  0% { transform: translateY(0) scale(.7); opacity: .7; }
+  100% { transform: translateY(-56rpx) scale(1.3); opacity: 0; }
+}
+.pot-text { margin-top: 30rpx; color: #8ea2c8; font-size: 15px; text-align: center; padding: 0 40rpx; min-height: 44rpx; }

@@ -38,6 +38,24 @@
 
   <button class="generate-btn" bindtap="onGenerate" hover-class="btn-hover">召唤主厨 👨‍🍳</button>
 
+  <!-- 召唤主厨后的烹饪小剧场 -->
+  <view class="pot-overlay" wx:if="{{generating}}">
+    <view class="pot-scene">
+      <view class="pot">🍲</view>
+      <view class="ing i1">🥔</view>
+      <view class="ing i2">🌽</view>
+      <view class="ing i3">🥕</view>
+      <view class="ing i4">🍜</view>
+      <view class="bubble b1"></view>
+      <view class="bubble b2"></view>
+      <view class="bubble b3"></view>
+      <view class="steam s1"></view>
+      <view class="steam s2"></view>
+    </view>
+    <view class="pot-text">{{potText}}</view>
+  </view>
+
+
   <!-- 剩菜博物馆 -->
   <view class="rank-section">
     <view class="rank-title">🏛️ 剩菜博物馆</view>

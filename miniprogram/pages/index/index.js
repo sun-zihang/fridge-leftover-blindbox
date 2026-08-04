@@ -1,5 +1,5 @@
 const { callFn } = require('../../utils/cloud');
-const { BADGES } = require('../../utils/game');
+const { BADGES, LOADING_LINES } = require('../../utils/game');
 const app = getApp();
 
 Page({
@@ -15,7 +15,9 @@ Page({
     badges: BADGES,
     micReady: false,
     micOn: false,
-    micText: ''
+    micText: '',
+    generating: false,
+    potText: ''
   },
 
   onLoad() {
@@ -23,6 +25,22 @@ Page({
     this.loadPlayer();
     this.loadRank();
   },
+
+  // 烹饪文案轮播
+  startPotText() {
+    const queue = LOADING_LINES.slice().sort(() => Math.random() - 0.5);
+    let idx = 0;
+    this.setData({ potText: queue[0] });
+    if (this._potTimer) clearInterval(this._potTimer);
+    this._potTimer = setInterval(() => {
+      idx = (idx + 1) % queue.length;
+      this.setData({ potText: queue[idx] });
+    }, 1800);
+  },
+  stopPotText() {
+    if (this._potTimer) { clearInterval(this._potTimer); this._potTimer = null; }
+  },
+  onUnload() { this.stopPotText(); },
 
   onInput(e) {
     const v = e.detail.value;
@@ -77,9 +95,11 @@ Page({
   onGenerate() {
     const ingredients = this.data.ingredients.trim();
     if (!ingredients) { wx.showToast({ title: '先告诉我冰箱里有什么', icon: 'none' }); return; }
-    wx.showLoading({ title: '主厨脑暴中…', mask: true });
+    this.setData({ generating: true });
+    this.startPotText();
     callFn('generateRecipe', { action: 'generate', ingredients, style: this.data.styleId }).then((r) => {
-      wx.hideLoading();
+      this.stopPotText();
+      this.setData({ generating: false });
       if (!r.success) { wx.showToast({ title: r.error || '生成失败', icon: 'none' }); return; }
       const g = app.globalData;
       g.recipe = r.data.recipe;
