@@ -97,6 +97,7 @@ node --test cloudfunctions/generateRecipe/test/recipe.test.js
 ## 🐛 常见问题
 - **云函数调用失败 / 报错 model not enabled**：按上文第 4 步启用模型并确认 Token 资源包已开通。
 - **网页无法调用云函数（权限/CORS）**：确认匿名登录已开启、Web 安全域名已添加。
+- **匿名用户调用云函数报 `PERMISSION_DENIED`**：云开发控制台 → 云函数 → 函数列表 → 该函数行内「权限控制」→ 将 `invoke` 规则设为 `true`（即「所有用户可调用」）→ 确定，保存后约 1–3 分钟生效。
 - **海报空白 / 下载异常**：请使用较新的 Chrome/Edge；演示模式与云模式走同一 Canvas 绘制逻辑。
 - **语音按钮不显示**：浏览器不支持 SpeechRecognition（仅 Chrome/Edge 支持），不影响其他功能。
 
