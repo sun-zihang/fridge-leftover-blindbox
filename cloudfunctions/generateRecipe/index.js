@@ -1,20 +1,32 @@
 // 云函数：generateRecipe
-// 功能：调用 CloudBase 托管大模型生成创意菜谱（严格 JSON 输出并校验），
-//       写入 recipes 集合；提供 rate（评价）与 listRank（红黑榜查询）动作。
-// 依赖：@cloudbase/node-sdk >= 3.16.0（云函数目录内 package.json 已声明）
-// 注意：部署后在云函数配置中把超时时间设置为 60~120 秒。
+// 功能：AI 生成创意菜谱（严格 JSON 输出并校验）+ 游戏化系统：
+//       - players：生存挑战（每日打卡 / 连续天数 / 生存积分 / 徽章）
+//       - styles：风格模板（积分解锁奇葩 Prompt）
+//       - tags：症状标签（剩菜博物馆分类）
+//       - challenges：好友投喂（甩锅接力，接受双方 +20 积分）
+// 依赖：@cloudbase/node-sdk >= 3.16.0
+// 注意：部署后把云函数超时时间设置为 60~120 秒。
 
 const tcb = require('@cloudbase/node-sdk');
-const { fallbackRecipe, extractJson, normalizeRecipe } = require('./recipe');
+const {
+  fallbackRecipe, extractJson, normalizeRecipe,
+  STYLES, STYLE_PROMPTS, guessTag, calcPoints
+} = require('./recipe');
 
 const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV });
 const ai = app.ai();
 const db = app.database();
 
-// 模型 ID（需在云开发控制台 -> AI 模型 中启用；默认 deepseek-v4-flash）
 const MODEL = 'deepseek-v4-flash';
+const CHALLENGE_BONUS = 20;
 
-// PRD 规定的 System Prompt
+// 徽章规则
+const BADGES = {
+  streak7: { id: '暗黑料理大师',   desc: '连续 7 天打卡成功' },
+  hospital3: { id: '米其林在逃主厨', desc: '累计 3 次「已进医院」' },
+  gens10: { id: '味蕾幸存者', desc: '累计生成 10 道菜' }
+};
+
 const SYSTEM_PROMPT =
   '你是一位拥有米其林三星实力，但性格幽默、热爱互联网冲浪的"深夜食堂主厨"。' +
   '用户会给你几种冰箱里快过期的奇葩食材，你需要将它们组合成一道菜。' +
@@ -25,11 +37,100 @@ const SYSTEM_PROMPT =
   '"plating": "极其夸张或搞笑的摆盘建议",' +
   '"warning": "一句话提醒这道菜的风险或注意事项"}';
 
-// 调用大模型生成，失败/非法时最多重试两次（共 3 次尝试）
-async function generate(ingredients) {
+// ---------- 工具 ----------
+
+function chinaToday() {
+  return new Date(Date.now() + 8 * 3600 * 1000).toISOString().slice(0, 10);
+}
+function yesterdayOf(today) {
+  const d = new Date(today + 'T00:00:00+08:00');
+  d.setDate(d.getDate() - 1);
+  return d.toISOString().slice(0, 10);
+}
+function getUid(event) {
+  // 显式 uid（CLI/自动化测试用，加前缀避免与真实 uid 冲突）
+  if (event && event.uid) return 'cli:' + event.uid;
+  try {
+    const info = app.auth().getUserInfo();
+    if (info && info.uid) return info.uid;
+  } catch (e) { /* 无调用者上下文（如未登录） */ }
+  return 'anon';
+}
+function wrap(d) {
+  return d && d.data && typeof d.data === 'object' ? d.data : d;
+}
+async function ensureCollection(name) {
+  try { await db.createCollection(name); }
+  catch (err) {
+    const msg = (err && err.message) ? String(err.message) : String(err);
+    if (msg.indexOf('exist') < 0 && msg.indexOf('EXIST') < 0) throw err;
+  }
+}
+async function findPlayer(uid) {
+  const res = await db.collection('players').doc(uid).get();
+  const list = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
+  const p = list.length ? wrap(list[0]) : null;
+  return p && p.uid ? p : null;
+}
+async function getOrCreatePlayer(uid) {
+  let p = await findPlayer(uid);
+  if (p) return p;
+  const base = {
+    uid: uid,
+    streak: 0, best_streak: 0, last_daily: '',
+    points: 0, total_generates: 0,
+    hospital_count: 0, yummy_count: 0,
+    badges: [], unlocked_styles: ['classic'],
+    created_at: db.serverDate(), updated_at: db.serverDate()
+  };
+  await db.collection('players').doc(uid).set({ data: base });
+  return base;
+}
+async function savePlayer(p) {
+  p.updated_at = db.serverDate();
+  await db.collection('players').doc(p.uid).set({ data: p });
+}
+function checkBadges(p) {
+  const news = [];
+  if (p.streak >= 7 && p.badges.indexOf(BADGES.streak7.id) < 0) news.push(BADGES.streak7.id);
+  if (p.hospital_count >= 3 && p.badges.indexOf(BADGES.hospital3.id) < 0) news.push(BADGES.hospital3.id);
+  if (p.total_generates >= 10 && p.badges.indexOf(BADGES.gens10.id) < 0) news.push(BADGES.gens10.id);
+  return news;
+}
+function applyBadges(p) {
+  const news = checkBadges(p);
+  news.forEach(function (id) { p.badges.push(id); });
+  return news;
+}
+function playerView(p) {
+  return {
+    uid: p.uid,
+    streak: p.streak,
+    best_streak: p.best_streak,
+    points: p.points,
+    total_generates: p.total_generates,
+    hospital_count: p.hospital_count,
+    yummy_count: p.yummy_count,
+    badges: p.badges,
+    unlocked_styles: p.unlocked_styles
+  };
+}
+function stylesView(p) {
+  return STYLES.map(function (s) {
+    return {
+      id: s.id, name: s.name, cost: s.cost, tagline: s.tagline,
+      unlocked: (p.unlocked_styles || []).indexOf(s.id) >= 0
+    };
+  });
+}
+
+// ---------- AI 生成 ----------
+
+async function generate(ingredients, style) {
   const model = ai.createModel('cloudbase');
   let recipe = null;
   let lastError = '';
+  const stylePrompt = (style && style.id !== 'classic') ? STYLE_PROMPTS[style.id] : '';
 
   for (let i = 0; i < 3; i++) {
     try {
@@ -37,6 +138,9 @@ async function generate(ingredients) {
         { role: 'system', content: SYSTEM_PROMPT },
         { role: 'user', content: '我的食材是：' + ingredients }
       ];
+      if (stylePrompt) {
+        messages.push({ role: 'user', content: '风格要求：' + stylePrompt });
+      }
       if (i > 0) {
         messages.push({
           role: 'user',
@@ -58,55 +162,48 @@ async function generate(ingredients) {
   return { recipe: recipe, fallback: false, lastError: lastError };
 }
 
-// 红黑榜：取最近 100 条，JS 端过滤已评价（真香 / 已进医院）并按 create_time 倒序取前 20 条。
-// 说明：该环境 node-sdk 读取文档时返回 { _id, data: {...} }（字段未自动解包），
-//       直接按顶层字段过滤/排序会拿到 undefined，因此这里先统一解包 data 再处理。
-async function listRank() {
-  const res = await db.collection('recipes')
-    .limit(100)
-    .get();
+// ---------- 红黑榜 / 博物馆 ----------
 
+async function listRank(tag) {
+  const res = await db.collection('recipes')
+    .limit(200)
+    .get();
   const rated = (res.data || [])
-    .map(function (r) {
-      const d = r && r.data && typeof r.data === 'object' ? r.data : r;
-      return d;
-    })
+    .map(function (r) { return wrap(r); })
     .filter(function (d) {
       return d.user_rating === '真香' || d.user_rating === '已进医院';
     })
+    .filter(function (d) { return !tag || d.tag === tag; })
     .sort(function (a, b) {
       const ta = a.create_time ? new Date(a.create_time).getTime() : 0;
       const tb = b.create_time ? new Date(b.create_time).getTime() : 0;
       return tb - ta;
     });
-
-  return rated.slice(0, 20).map(function (d) {
+  return rated.slice(0, 30).map(function (d) {
     const rd = d.recipe_data || {};
     return {
       name: typeof rd.name === 'string' && rd.name ? rd.name : '未命名料理',
       rating: typeof d.user_rating === 'string' ? d.user_rating : '',
       warning: typeof rd.warning === 'string' ? rd.warning : '',
-      ingredients: typeof d.ingredients === 'string' ? d.ingredients : ''
+      ingredients: typeof d.ingredients === 'string' ? d.ingredients : '',
+      tag: typeof d.tag === 'string' ? d.tag : '硬核养生'
     };
   });
 }
 
-// 确保 recipes 集合存在（幂等：已存在时报错忽略，避免每次查询/写入前手动建集合）
-async function ensureRecipesCollection() {
-  try {
-    await db.createCollection('recipes');
-  } catch (err) {
-    const msg = (err && err.message) ? String(err.message) : String(err);
-    if (msg.indexOf('exist') < 0) {
-      throw err;
-    }
-  }
-}
+// ---------- 主入口 ----------
 
 exports.main = async (event) => {
   const action = event && event.action;
   try {
-    // 动作：rate（评价）
+    const uid = getUid(event);
+    await Promise.all([
+      ensureCollection('recipes'),
+      ensureCollection('players'),
+      ensureCollection('challenges')
+    ]);
+
+    // 评价：更新评分 + 玩家积分/徽章
     if (action === 'rate') {
       const recordId = event.recordId;
       const rating = event.rating;
@@ -116,41 +213,156 @@ exports.main = async (event) => {
       await db.collection('recipes').doc(recordId).update({
         data: { user_rating: rating, rate_time: db.serverDate() }
       });
-      return { success: true, data: { recordId: recordId } };
+      const p = await getOrCreatePlayer(uid);
+      if (rating === '真香') { p.yummy_count += 1; p.points += 15; }
+      if (rating === '已进医院') { p.hospital_count += 1; p.points += 20; }
+      const badgesNew = applyBadges(p);
+      await savePlayer(p);
+      return {
+        success: true,
+        data: { recordId: recordId, points_gained: rating === '真香' ? 15 : 20, badges_new: badgesNew, player: playerView(p) }
+      };
     }
 
-    // 动作：listRank（红黑榜查询）
+    // 红黑榜 / 剩菜博物馆
     if (action === 'listRank') {
-      await ensureRecipesCollection();
-      const data = await listRank();
+      const data = await listRank(event.tag);
       return { success: true, data: data };
     }
 
-    // 默认动作：generate（生成菜谱）
+    // 玩家状态 + 风格模板列表
+    if (action === 'getPlayer') {
+      const p = await getOrCreatePlayer(uid);
+      return { success: true, data: { player: playerView(p), styles: stylesView(p) } };
+    }
+
+    // 解锁风格模板
+    if (action === 'unlockStyle') {
+      const style = STYLES.find(function (s) { return s.id === event.styleId; });
+      if (!style) return { success: false, error: '风格不存在' };
+      const p = await getOrCreatePlayer(uid);
+      if ((p.unlocked_styles || []).indexOf(style.id) >= 0) {
+        return { success: true, data: { player: playerView(p), styles: stylesView(p) } };
+      }
+      if (p.points < style.cost) return { success: false, error: '积分不足' };
+      p.points -= style.cost;
+      p.unlocked_styles.push(style.id);
+      await savePlayer(p);
+      return { success: true, data: { player: playerView(p), styles: stylesView(p) } };
+    }
+
+    // 甩锅给好友：基于某条已生成的菜谱创建挑战
+    if (action === 'createChallenge') {
+      const recordId = event.recordId;
+      if (!recordId) return { success: false, error: '缺少菜谱' };
+      const res = await db.collection('recipes').doc(recordId).get();
+      const list = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
+      const rec = list.length ? wrap(list[0]) : null;
+      if (!rec || !rec.recipe_data) return { success: false, error: '菜谱不存在' };
+      const addRes = await db.collection('challenges').add({
+        data: {
+          from_uid: uid,
+          recipe: rec.recipe_data,
+          ingredients: rec.ingredients || '',
+          tag: rec.tag || guessTag(rec.recipe_data),
+          status: 'pending',
+          bonus: CHALLENGE_BONUS,
+          create_time: db.serverDate()
+        }
+      });
+      return { success: true, data: { challengeId: addRes.id || addRes._id || '' } };
+    }
+
+    // 接受挑战：双方 +20 积分
+    if (action === 'acceptChallenge') {
+      const challengeId = event.challengeId;
+      if (!challengeId) return { success: false, error: '缺少挑战 ID' };
+      const res = await db.collection('challenges').doc(challengeId).get();
+      const list = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
+      const ch = list.length ? wrap(list[0]) : null;
+      if (!ch) return { success: false, error: '挑战不存在或已失效' };
+      if (ch.status !== 'pending') return { success: false, error: '挑战已被接受' };
+      if (ch.from_uid === uid) return { success: false, error: '不能接受自己甩的锅' };
+
+      await db.collection('challenges').doc(challengeId).update({
+        data: { status: 'accepted', accepted_uid: uid, accept_time: db.serverDate() }
+      });
+      // 双方 +bonus
+      const pa = await getOrCreatePlayer(uid);
+      pa.points += (ch.bonus || CHALLENGE_BONUS);
+      const badgesA = applyBadges(pa);
+      await savePlayer(pa);
+      if (ch.from_uid) {
+        const pf = await findPlayer(ch.from_uid);
+        if (pf) { pf.points += (ch.bonus || CHALLENGE_BONUS); await savePlayer(pf); }
+      }
+      return {
+        success: true,
+        data: {
+          challenge: { recipe: ch.recipe, ingredients: ch.ingredients || '', tag: ch.tag || '硬核养生' },
+          points_gained: ch.bonus || CHALLENGE_BONUS,
+          badges_new: badgesA,
+          player: playerView(pa)
+        }
+      };
+    }
+
+    // 默认动作：generate（生成菜谱 + 生存挑战打卡/积分）
     const ingredients = String((event && event.ingredients) || '').trim();
     if (!ingredients) {
       return { success: false, error: '食材不能为空' };
     }
+    const style = STYLES.find(function (s) { return s.id === event.style; }) || STYLES[0];
+    const p = await getOrCreatePlayer(uid);
+    if (style.cost > 0 && (p.unlocked_styles || []).indexOf(style.id) < 0) {
+      return { success: false, error: '该风格尚未解锁，先去攒积分吧' };
+    }
 
-    await ensureRecipesCollection();
-
-    const generated = await generate(ingredients);
+    const generated = await generate(ingredients, style);
+    const tag = guessTag(generated.recipe);
 
     const addRes = await db.collection('recipes').add({
       data: {
         ingredients: ingredients,
         recipe_data: generated.recipe,
         user_rating: '待评价',
+        tag: tag,
+        style: style.id,
+        creator_uid: uid,
         create_time: db.serverDate()
       }
     });
+
+    // 每日打卡 + 积分结算
+    const today = chinaToday();
+    let dailyBonus = 0;
+    let streakBonus = 0;
+    if (p.last_daily !== today) {
+      if (p.last_daily === yesterdayOf(today)) { p.streak += 1; } else { p.streak = 1; }
+      p.last_daily = today;
+      if (p.streak > p.best_streak) p.best_streak = p.streak;
+      dailyBonus = 5;
+      streakBonus = (p.streak - 1) * 2;
+    }
+    p.total_generates += 1;
+    const pointsGained = calcPoints({ base: 10, streakBonus: streakBonus, dailyBonus: dailyBonus });
+    p.points += pointsGained;
+    const badgesNew = applyBadges(p);
+    await savePlayer(p);
 
     return {
       success: true,
       data: {
         recipe: generated.recipe,
         recordId: addRes.id || addRes._id || '',
-        fallback: generated.fallback
+        fallback: generated.fallback,
+        tag: tag,
+        style: style.id,
+        points_gained: pointsGained,
+        streak: p.streak,
+        badges_new: badgesNew,
+        player: playerView(p),
+        styles: stylesView(p)
       },
       warning: generated.lastError || ''
     };

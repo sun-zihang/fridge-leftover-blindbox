@@ -8,7 +8,7 @@
   var isDemo = !CLOUD_ENV_ID || CLOUD_ENV_ID === 'YOUR_ENV_ID';
 
   var cloudApp = null;
-  var state = { recipe: null, recordId: '', rated: false, generating: false };
+var state = { recipe: null, recordId: '', rated: false, generating: false, styleId: 'classic', player: null, styles: [], rankData: [], rankTag: '全部', posterSkin: 'normal', challengeId: '' };
 
   function $(id) { return document.getElementById(id); }
   var els = {
@@ -43,7 +43,18 @@
     rankModalEmoji: $('rankModalEmoji'),
     rankModalDish: $('rankModalDish'),
     rankModalTag: $('rankModalTag'),
-    rankModalComment: $('rankModalComment')
+    rankModalComment: $('rankModalComment'),
+    rankTabs: $('rankTabs'),
+    challengeCard: $('challengeCard'),
+    statStreak: $('statStreak'),
+    statPoints: $('statPoints'),
+    statBadges: $('statBadges'),
+    badgeWall: $('badgeWall'),
+    styleList: $('styleList'),
+    pointsLine: $('pointsLine'),
+    challengeBtn: $('challengeBtn'),
+    challengeBanner: $('challengeBanner'),
+    acceptChallengeBtn: $('acceptChallengeBtn')
   };
 
   /* ===== 工具 ===== */
@@ -84,6 +95,139 @@
       return Promise.resolve(false);
     }
   }
+
+  /* ===== 游戏化：生存挑战 / 风格 / 投喂 ===== */
+  function renderChallengeCard(player, styles) {
+    if (!player) return;
+    state.player = player;
+    state.styles = styles || [];
+    els.challengeCard.classList.remove('hidden');
+    els.statStreak.textContent = player.streak || 0;
+    els.statPoints.textContent = player.points || 0;
+    els.statBadges.textContent = (player.badges || []).length;
+    els.badgeWall.textContent = '';
+    var allBadges = [
+      { id: '暗黑料理大师', emoji: '👨‍🍳' },
+      { id: '米其林在逃主厨', emoji: '🚑' },
+      { id: '味蕾幸存者', emoji: '🫡' }
+    ];
+    allBadges.forEach(function (b) {
+      var chip = document.createElement('span');
+      chip.className = 'badge-chip' + ((player.badges || []).indexOf(b.id) >= 0 ? '' : ' locked');
+      chip.textContent = b.emoji + ' ' + b.id;
+      els.badgeWall.appendChild(chip);
+    });
+    renderStyles(styles || []);
+  }
+  function renderStyles(styles) {
+    els.styleList.textContent = '';
+    (styles || []).forEach(function (st) {
+      var chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'style-chip' + (st.unlocked ? '' : ' locked') + (st.id === state.styleId ? ' selected' : '');
+      chip.textContent = st.name + (st.unlocked ? '' : ' 🔒' + st.cost);
+      chip.addEventListener('click', function () {
+        if (!st.unlocked) {
+          if (cloudApp && state.player && state.player.points >= st.cost) { unlockStyle(st.id); }
+          else { toast('积分不足，还差 ' + (st.cost - (state.player ? state.player.points : 0)) + ' 分'); }
+          return;
+        }
+        state.styleId = st.id;
+        renderStyles(state.styles);
+      });
+      els.styleList.appendChild(chip);
+    });
+  }
+  function unlockStyle(styleId) {
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'unlockStyle', styleId: styleId } })
+      .then(function (res) {
+        var r = res && res.result ? res.result : {};
+        if (!r.success) throw new Error(r.error || '解锁失败');
+        state.styleId = styleId;
+        var nm = '';
+        (r.data.styles || []).forEach(function (st) { if (st.id === styleId) nm = st.name; });
+        renderChallengeCard(r.data.player, r.data.styles);
+        toast('已解锁：' + nm);
+      })
+      .catch(function (e) { toast((e && e.message) ? e.message : '解锁失败'); });
+  }
+  function loadPlayer() {
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'getPlayer' } })
+      .then(function (res) {
+        var r = res && res.result ? res.result : {};
+        if (!r.success) throw new Error(r.error || '加载失败');
+        renderChallengeCard(r.data.player, r.data.styles);
+      })
+      .catch(function (e) { console.warn('getPlayer failed:', e); });
+  }
+  function applyGameResult(d) {
+    if (!d) return;
+    if (typeof d.points_gained === 'number') {
+      var parts = ['+' + d.points_gained + ' 生存积分'];
+      if (d.streak) parts.push('🔥 连续 ' + d.streak + ' 天');
+      els.pointsLine.textContent = parts.join(' · ');
+      els.pointsLine.classList.remove('hidden');
+    }
+    if (d.badges_new && d.badges_new.length) { toast('🏅 解锁徽章：' + d.badges_new.join('、')); }
+    if (d.player) renderChallengeCard(d.player, d.styles);
+  }
+  function getQuery(name) {
+    var m = new RegExp('[?&]' + name + '=([^&]+)').exec(location.search);
+    return m ? decodeURIComponent(m[1]) : '';
+  }
+  function handleChallengeParam() {
+    var id = getQuery('challenge');
+    if (!id) return;
+    els.challengeBanner.classList.remove('hidden');
+    state.challengeId = id;
+  }
+  function acceptChallengeFlow() {
+    if (!state.challengeId) return;
+    els.challengeBanner.classList.add('hidden');
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'acceptChallenge', challengeId: state.challengeId } })
+      .then(function (res) {
+        var r = res && res.result ? res.result : {};
+        if (!r.success) throw new Error(r.error || '接受挑战失败');
+        var ch = r.data.challenge || {};
+        state.recipe = ch.recipe || null;
+        state.recordId = '';
+        state.rated = false;
+        state.posterSkin = 'normal';
+        els.dishName.textContent = (ch.recipe && ch.recipe.name) || '神秘投喂';
+        els.dishIngredients.textContent = ch.ingredients ? '食材：' + ch.ingredients : '';
+        renderSteps(ch.recipe);
+        els.plating.textContent = '“' + ((ch.recipe && ch.recipe.plating) || '') + '”';
+        els.warning.textContent = (ch.recipe && ch.recipe.warning) || '';
+        els.pointsLine.textContent = '+20 投喂奖励到账 · 快用同款食材开做吧！';
+        els.pointsLine.classList.remove('hidden');
+        els.result.classList.remove('hidden');
+        els.result.scrollIntoView({ behavior: 'smooth' });
+        if (r.data.player) renderChallengeCard(r.data.player, r.data.styles);
+      })
+      .catch(function (e) { toast((e && e.message) ? e.message : '接受挑战失败'); });
+  }
+  function copyLink(link) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(link).then(function () { toast('挑战链接已复制，发给好友吧'); });
+    } else {
+      prompt('复制挑战链接发给好友：', link);
+    }
+  }
+  els.challengeBtn.addEventListener('click', function () {
+    if (!state.recordId) { toast('先生成一道菜再甩锅'); return; }
+    if (isDemo || !cloudApp) { toast('演示模式暂不支持甩锅'); return; }
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'createChallenge', recordId: state.recordId } })
+      .then(function (res) {
+        var r = res && res.result ? res.result : {};
+        if (!r.success) throw new Error(r.error || '甩锅失败');
+        var link = location.origin + location.pathname + '?challenge=' + encodeURIComponent(r.data.challengeId);
+        if (navigator.share) {
+          navigator.share({ title: '冰箱剩菜盲盒 · 好友投喂', text: '我甩给你一道黑暗料理，敢接受挑战吗？', url: link }).catch(function () { copyLink(link); });
+        } else { copyLink(link); }
+      })
+      .catch(function (e) { toast((e && e.message) ? e.message : '甩锅失败'); });
+  });
+  els.acceptChallengeBtn.addEventListener('click', acceptChallengeFlow);
 
   /* ===== 输入 ===== */
   els.ingredients.addEventListener('input', function () {
@@ -149,12 +293,17 @@ recognition.interimResults = true;
     '正在把黑暗料理往“能吃”的方向硬拽…',
     '泡面已经就位，就差一个大胆的创意…',
     '洋葱哭了，但主厨说这是料理的一部分…',
-    '主厨正在给剩菜们做“入职培训”…',
+    '主厨正在给剩菜们开动员大会…',
+    '酱油和醋正在争夺今晚的 C 位…',
+    '主厨把锅铲甩出了残影…',
+    '剩菜们正在接受命运的安排…',
     '冰箱里传来一阵低语：“求你别放过我”…',
     '主厨深吸一口气，决定赌一把大的…',
-    '调味料们正在举手表决今晚的菜名…'
+    '调味料们正在举手表决今晚的菜名…',
+    '锅已经热好，就差一个敢吃的人…'
   ];
   var potTimer = null;
+  var typeTimer = null;
   function shuffleArr(arr) {
     var a = arr.slice();
     for (var i = a.length - 1; i > 0; i--) {
@@ -163,16 +312,26 @@ recognition.interimResults = true;
     }
     return a;
   }
+  function typeLine(text) {
+    if (typeTimer) clearInterval(typeTimer);
+    els.potText.textContent = '';
+    var k = 0;
+    typeTimer = setInterval(function () {
+      k++;
+      els.potText.textContent = text.slice(0, k) + (k < text.length ? '▍' : '');
+      if (k >= text.length) { clearInterval(typeTimer); typeTimer = null; }
+    }, 45);
+  }
   function startPotShow() {
     els.potLoading.classList.remove('hidden');
     var queue = shuffleArr(LOADING_LINES);
     var idx = 0;
-    els.potText.textContent = queue[0];
+    typeLine(queue[0]);
     if (potTimer) clearInterval(potTimer);
     potTimer = setInterval(function () {
       idx = (idx + 1) % queue.length;
-      els.potText.textContent = queue[idx];
-    }, 1800);
+      typeLine(queue[idx]);
+    }, 2300);
   }
   function stopPotShow() {
     if (potTimer) { clearInterval(potTimer); potTimer = null; }
@@ -198,11 +357,12 @@ recognition.interimResults = true;
       return;
     }
 
-    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'generate', ingredients: text } })
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'generate', ingredients: text, style: state.styleId } })
       .then(function (res) {
         var r = res && res.result ? res.result : {};
         if (!r.success) throw new Error(r.error || '生成失败');
         finishGenerate(text, r.data.recipe, r.data.recordId || '', !!r.data.fallback);
+        applyGameResult(r.data);
       })
       .catch(function (err) {
         state.generating = false;
@@ -219,21 +379,7 @@ recognition.interimResults = true;
       });
   }
 
-  function finishGenerate(ingredients, recipe, recordId, isFallback) {
-    state.generating = false;
-    state.recipe = recipe;
-    state.recordId = recordId || '';
-    state.rated = false;
-    els.genBtn.disabled = false;
-    els.genBtn.textContent = '召唤主厨 👨‍🍳';
-    els.potLoading.classList.add('hidden');
-
-    els.dishName.textContent = recipe.name;
-    els.stepsWrap.classList.add('hidden');
-    els.warning.classList.add('hidden');
-    els.stepsToggle.classList.remove('open');
-    els.warningToggle.classList.remove('open');
-    els.dishIngredients.textContent = '食材：' + ingredients;
+  function renderSteps(recipe) {
     els.steps.innerHTML = '';
     var stepEmojis = ['🔪', '🔥', '🍳', '🧂', '✨', '🍜'];
     (recipe.steps || []).forEach(function (s, i) {
@@ -274,6 +420,27 @@ recognition.interimResults = true;
       });
       els.steps.appendChild(li);
     });
+  }
+
+  function finishGenerate(ingredients, recipe, recordId, isFallback) {
+    state.generating = false;
+    state.recipe = recipe;
+    state.recordId = recordId || '';
+    state.rated = false;
+    state.posterSkin = 'normal';
+    els.pointsLine.classList.add('hidden');
+    els.posterBtn.textContent = '生成朋友圈打卡海报 📸';
+    els.genBtn.disabled = false;
+    els.genBtn.textContent = '召唤主厨 👨‍🍳';
+    els.potLoading.classList.add('hidden');
+
+    els.dishName.textContent = recipe.name;
+    els.stepsWrap.classList.add('hidden');
+    els.warning.classList.add('hidden');
+    els.stepsToggle.classList.remove('open');
+    els.warningToggle.classList.remove('open');
+    els.dishIngredients.textContent = '食材：' + ingredients;
+    renderSteps(recipe);
     els.plating.textContent = '“' + recipe.plating + '”';
     els.warning.textContent = recipe.warning;
     els.result.classList.remove('hidden');
@@ -335,6 +502,11 @@ recognition.interimResults = true;
           if (!r.success) throw new Error(r.error || '评价失败');
           state.rated = true;
           toast('评价成功');
+          state.posterSkin = rating === '真香' ? 'cert' : 'medical';
+          els.posterBtn.textContent = rating === '真香' ? '生成米其林认证书 🏆' : '生成急诊挂号单 🏥';
+          var gained = (r.data && r.data.points_gained) ? r.data.points_gained : 0;
+          toast('评价成功 +' + gained + ' 积分');
+          if (r.data) applyGameResult(r.data);
         })
         .catch(function (e) { toast((e && e.message) ? e.message : '评价失败'); });
     });
@@ -353,12 +525,14 @@ recognition.interimResults = true;
 
   els.posterBtn.addEventListener('click', function () {
     if (!state.recipe) return;
-    drawPoster(state.recipe, els.ingredients.value.trim());
+    drawPoster(state.recipe, els.ingredients.value.trim(), state.posterSkin);
     els.posterSection.classList.remove('hidden');
     els.posterSection.scrollIntoView({ behavior: 'smooth' });
   });
 
-  function drawPoster(recipe, ingredients) {
+  function drawPoster(recipe, ingredients, skin) {
+    if (skin === 'cert') return drawCertPoster(recipe, ingredients);
+    if (skin === 'medical') return drawMedicalPoster(recipe, ingredients);
     var canvas = els.posterCanvas;
     var ctx = canvas.getContext('2d');
     var W = 750, H = 1200;
@@ -462,6 +636,136 @@ recognition.interimResults = true;
     ctx.fillStyle = '#6b7f9e';
     ctx.font = '22px sans-serif';
     ctx.fillText('长按保存 · 分享到朋友圈打卡', W / 2, H - 42);
+  }
+
+
+
+  /* ===== 海报皮肤：米其林三星认证书 ===== */
+  function drawCertPoster(recipe, ingredients) {
+    var canvas = els.posterCanvas;
+    var ctx = canvas.getContext('2d');
+    var W = 750, H = 1200;
+    ctx.clearRect(0, 0, W, H);
+    var bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#0b1026');
+    bg.addColorStop(1, '#1a0f2e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    ctx.strokeStyle = '#d4af37';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(30, 30, W - 60, H - 60);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(46, 46, W - 92, H - 92);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#d4af37';
+    ctx.font = 'bold 46px sans-serif';
+    ctx.fillText('⭐ 米其林三星认证书 ⭐', W / 2, 170);
+    ctx.font = '24px sans-serif';
+    ctx.fillStyle = '#c9b98a';
+    ctx.fillText('MICHELIN STAR CERTIFICATE (AI VERIFIED)', W / 2, 210);
+    ctx.strokeStyle = '#d4af37';
+    ctx.beginPath();
+    ctx.moveTo(150, 240);
+    ctx.lineTo(W - 150, 240);
+    ctx.stroke();
+    ctx.fillStyle = '#e8e0c8';
+    ctx.font = '28px sans-serif';
+    ctx.fillText('兹授予以下菜品「深夜食堂三星认证」：', W / 2, 300);
+    glowText(ctx, recipe.name, W / 2, 430, 'bold 72px sans-serif', '#ffd700', 36);
+    if (ingredients) {
+      ctx.fillStyle = '#8ea2c8';
+      ctx.font = '28px sans-serif';
+      wrapText(ctx, '食材：' + ingredients, 90, 500, W - 180, 42, 'center');
+    }
+    ctx.fillStyle = '#d4af37';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.fillText('评审委员会意见', W / 2, 640);
+    ctx.fillStyle = '#e8e0c8';
+    ctx.font = '28px sans-serif';
+    wrapText(ctx, '“' + (recipe.plating || '') + '”', 90, 700, W - 180, 44, 'center');
+    ctx.fillStyle = '#b98a5a';
+    wrapText(ctx, '摆盘大胆，风味狂野，堪称黑暗料理界的清流。', 90, 820, W - 180, 40, 'center');
+    ctx.fillStyle = '#d4af37';
+    ctx.font = 'italic 32px sans-serif';
+    ctx.fillText('—— 深夜食堂 AI 主厨 亲笔', W / 2, 980);
+    ctx.save();
+    ctx.translate(W - 170, 950);
+    ctx.rotate(-0.3);
+    ctx.strokeStyle = 'rgba(255,45,78,0.8)';
+    ctx.lineWidth = 6;
+    ctx.beginPath();
+    ctx.arc(0, 0, 70, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = 'rgba(255,45,78,0.8)';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('三星认证', 0, 6);
+    ctx.restore();
+    ctx.fillStyle = '#6b7f9e';
+    ctx.font = '24px sans-serif';
+    ctx.fillText('冰箱剩菜盲盒 · 深夜食堂', W / 2, 1110);
+  }
+
+  /* ===== 海报皮肤：三甲医院急诊挂号单 ===== */
+  function drawMedicalPoster(recipe, ingredients) {
+    var canvas = els.posterCanvas;
+    var ctx = canvas.getContext('2d');
+    var W = 750, H = 1200;
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#f7f7f2';
+    ctx.fillRect(0, 0, W, H);
+    ctx.fillStyle = '#c8102e';
+    ctx.fillRect(0, 0, W, 26);
+    ctx.fillRect(0, H - 26, W, 26);
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#c8102e';
+    ctx.font = 'bold 52px sans-serif';
+    ctx.fillText('🏥 急诊挂号单', W / 2, 130);
+    ctx.font = '24px sans-serif';
+    ctx.fillStyle = '#555';
+    ctx.fillText('三甲医院（深夜食堂分院）· AI 会诊记录', W / 2, 175);
+    function row(label, value, y, color) {
+      ctx.font = '30px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillStyle = '#333';
+      ctx.fillText(label, 80, y);
+      ctx.fillStyle = color || '#111';
+      wrapText(ctx, value || '', 260, y, W - 360, 42, 'left');
+    }
+    row('科    室：', '黑暗料理科', 270);
+    row('就诊人：', '勇敢的剩菜勇士', 340);
+    row('主    诉：', '“我让 AI 用冰箱剩菜做了顿饭”', 410);
+    row('诊    断：', recipe.name, 500, '#c8102e');
+    row('食    材：', ingredients, 580);
+    ctx.font = '30px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#333';
+    ctx.fillText('医    嘱：', 80, 700);
+    ctx.fillStyle = '#c8102e';
+    wrapText(ctx, recipe.warning || '', 260, 700, W - 360, 44, 'left');
+    ctx.fillStyle = '#333';
+    wrapText(ctx, '建议：多喝热水，别让朋友知道，下次别这样了。', 260, 830, W - 360, 40, 'left');
+    ctx.save();
+    ctx.translate(W - 160, 950);
+    ctx.rotate(-0.35);
+    ctx.strokeStyle = '#c8102e';
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(0, 0, 78, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, 0, 66, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#c8102e';
+    ctx.font = 'bold 26px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('急诊', 0, 2);
+    ctx.fillText('抢救中', 0, 36);
+    ctx.restore();
+    ctx.fillStyle = '#888';
+    ctx.font = '24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('冰箱剩菜盲盒 · 深夜食堂出品', W / 2, 1110);
   }
 
   function glowText(ctx, text, x, y, font, color, blur) {
@@ -582,12 +886,19 @@ recognition.interimResults = true;
   }
 
   // 从演示菜池随机抽取 count 条
+  var RANK_TAGS = ['深夜emo必吃', '月底吃土首选', '前任看了想打人', '吃完能瘦十斤（骗你的）', '硬核养生'];
+  function tagForDemo() { return RANK_TAGS[Math.floor(Math.random() * RANK_TAGS.length)]; }
+  // 从演示菜池随机抽取 count 条（含随机症状标签）
   function randomRankItems(count) {
-    return shuffleRank(RANK_DEMO).slice(0, count);
+    return shuffleRank(RANK_DEMO).slice(0, count).map(function (it) {
+      var copy = {};
+      for (var k in it) { if (Object.prototype.hasOwnProperty.call(it, k)) copy[k] = it[k]; }
+      copy.tag = copy.tag || tagForDemo();
+      return copy;
+    });
   }
-
   function loadRank(cloudReady) {
-    if (isDemo || !cloudReady || !cloudApp) { renderRank(randomRankItems(RANK_MAX_ITEMS)); return; }
+    if (isDemo || !cloudReady || !cloudApp) { state.rankData = randomRankItems(RANK_MAX_ITEMS); renderRankTabs(); renderRank(state.rankData); return; }
     cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'listRank' } })
       .then(function (res) {
         var r = res && res.result ? res.result : {};
@@ -597,7 +908,8 @@ recognition.interimResults = true;
             emoji: item.rating === '已进医院' ? '🚑' : '😋',
             dish: item.name || '未命名料理',
             comment: item.warning || (item.ingredients ? '食材：' + item.ingredients : ''),
-            rating: item.rating || '待评价'
+            rating: item.rating || '待评价',
+            tag: item.tag || '硬核养生'
           };
         });
         var items;
@@ -608,6 +920,8 @@ recognition.interimResults = true;
           // 真实评价不足：用演示数据随机补足，榜单每次都不同
           items = shuffleRank(real.concat(randomRankItems(RANK_MAX_ITEMS - real.length)));
         }
+        state.rankData = items;
+        renderRankTabs();
         renderRank(items);
       })
       .catch(function (err) {
@@ -641,6 +955,11 @@ recognition.interimResults = true;
       card.appendChild(dish);
       card.appendChild(comment);
       card.appendChild(tag);
+
+      var mini = document.createElement('span');
+      mini.className = 'rank-tag-mini';
+      mini.textContent = item.tag || '硬核养生';
+      card.appendChild(mini);
       els.rankList.appendChild(card);
       card.tabIndex = 0;
       card.setAttribute('role', 'button');
@@ -669,7 +988,31 @@ recognition.interimResults = true;
     if (e.target === els.rankModal || e.target.classList.contains('rank-modal-backdrop')) closeRankModal();
   });
 
+  function renderRankTabs() {
+    els.rankTabs.textContent = '';
+    var tags = ['全部'];
+    state.rankData.forEach(function (it) {
+      if (it.tag && tags.indexOf(it.tag) < 0) tags.push(it.tag);
+    });
+    tags.forEach(function (t) {
+      var tab = document.createElement('button');
+      tab.type = 'button';
+      tab.className = 'rank-tab' + (t === state.rankTag ? ' active' : '');
+      tab.textContent = t;
+      tab.addEventListener('click', function () {
+        state.rankTag = t;
+        renderRankTabs();
+        renderRank(state.rankTag === '全部' ? state.rankData : state.rankData.filter(function (it) { return it.tag === state.rankTag; }));
+      });
+      els.rankTabs.appendChild(tab);
+    });
+  }
+
   initCloud().then(function (ready) {
     loadRank(ready);
+    if (!isDemo && cloudApp) {
+      loadPlayer();
+      handleChallengeParam();
+    }
   });
 })();

@@ -14,6 +14,17 @@
       <p class="subtitle">深夜食堂主厨 · 在线整活</p>
     </header>
 
+    <div id="challengeBanner" class="challenge-banner hidden">
+      <div class="banner-inner">
+        <span class="banner-emoji">🍽️</span>
+        <div class="banner-text">
+          <b>来自好友的投喂</b>
+          <p>TA 甩给你一道「黑暗料理」，敢接受挑战吗？</p>
+        </div>
+        <button id="acceptChallengeBtn" class="accept-btn" type="button">接受挑战</button>
+      </div>
+    </div>
+
     <section class="input-card">
       <textarea id="ingredients" maxlength="200" rows="3" placeholder="例如：半个洋葱、两包泡面、一瓶可乐"></textarea>
       <div class="input-footer">
@@ -21,6 +32,19 @@
         <span id="micWave" class="mic-wave hidden" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
         <span id="micHint" class="mic-hint hidden">正在聆听，说出你的剩菜…</span>
         <span id="charCount" class="char-count">0/200</span>
+      </div>
+    </section>
+
+    <section id="challengeCard" class="challenge-card hidden">
+      <div class="challenge-stats">
+        <div class="stat"><span class="stat-icon">🔥</span><b id="statStreak">0</b><i>连续天数</i></div>
+        <div class="stat"><span class="stat-icon">🪙</span><b id="statPoints">0</b><i>生存积分</i></div>
+        <div class="stat"><span class="stat-icon">🏅</span><b id="statBadges">0</b><i>徽章</i></div>
+      </div>
+      <div id="badgeWall" class="badge-wall"></div>
+      <div class="style-row">
+        <span class="style-label">主厨风格</span>
+        <div id="styleList" class="style-list"></div>
       </div>
     </section>
 
@@ -45,6 +69,7 @@
     <div id="result" class="result hidden">
       <h2 id="dishName" class="dish-name neon-pink"></h2>
       <p id="dishIngredients" class="dish-ingredients"></p>
+      <p id="pointsLine" class="points-line hidden"></p>
 
       <button id="stepsToggle" class="section-toggle" type="button"><span>👨‍🍳 轻触查看做法</span><span class="chev">▾</span></button>
       <div id="stepsWrap" class="collapsible hidden">
@@ -66,6 +91,7 @@
 
       <button id="posterBtn" class="poster-btn" type="button">生成朋友圈打卡海报 📸</button>
       <button id="shareBtn" class="share-btn" type="button">分享给好友</button>
+      <button id="challengeBtn" class="challenge-btn" type="button">🔥 甩锅给好友</button>
     </div>
 
     <section id="posterSection" class="poster-section hidden">
@@ -78,8 +104,9 @@
     </section>
 
     <section class="rank-section">
-      <h2 class="rank-title">🔥 黑暗料理红黑榜</h2>
-      <p class="rank-sub">看看前辈们用冰箱剩菜换来了什么结局</p>
+      <h2 class="rank-title">🏛️ 剩菜博物馆</h2>
+      <p class="rank-sub">全网最离谱菜谱大赏 · 按症状分类</p>
+      <div id="rankTabs" class="rank-tabs"></div>
       <div id="rankList" class="rank-scroll"></div>
     </section>
 

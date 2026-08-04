@@ -364,3 +364,79 @@ html, body {
 .section-toggle .chev { transition: transform .25s; color: #8ea2c8; font-size: 14px; }
 .section-toggle.open .chev { transform: rotate(180deg); }
 .collapsible { overflow: hidden; animation: dishIn .35s ease-out; }
+
+
+/* ===== 生存挑战卡 ===== */
+.challenge-card {
+  margin-top: 20px;
+  background: linear-gradient(160deg, rgba(20,28,56,.85), rgba(10,18,40,.9));
+  border: 2px solid rgba(255,230,0,.35);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 0 24px rgba(255,230,0,.08);
+}
+.challenge-stats { display: flex; gap: 8px; }
+.stat { flex: 1; text-align: center; background: rgba(255,255,255,.04); border-radius: 12px; padding: 8px 4px; }
+.stat-icon { font-size: 18px; display: block; }
+.stat b { display: block; font-size: 20px; color: #ffe600; }
+.stat i { font-style: normal; font-size: 11px; color: #8ea2c8; }
+.badge-wall { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 6px; min-height: 6px; }
+.badge-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: rgba(0,240,255,.12); color: #00f0ff; border: 1px solid rgba(0,240,255,.4);
+}
+.badge-chip.locked { opacity: .45; filter: grayscale(1); }
+
+/* ===== 风格选择器 ===== */
+.style-row { margin-top: 12px; display: flex; align-items: flex-start; gap: 8px; }
+.style-label { font-size: 12px; color: #8ea2c8; margin-top: 6px; flex-shrink: 0; }
+.style-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.style-chip {
+  padding: 4px 10px; border-radius: 999px; font-size: 12px; cursor: pointer;
+  background: rgba(255,255,255,.05); color: #9db1d4; border: 1px solid rgba(255,255,255,.15);
+  transition: all .15s; font-family: inherit;
+}
+.style-chip:hover { border-color: #00f0ff; color: #00f0ff; }
+.style-chip.locked { cursor: not-allowed; opacity: .55; }
+.style-chip.locked:hover { border-color: rgba(255,255,255,.15); color: #9db1d4; }
+.style-chip.selected { background: linear-gradient(135deg,#00f0ff,#b026ff); color: #0a0e1a; border-color: transparent; font-weight: 800; }
+
+/* ===== 积分行 / 甩锅按钮 ===== */
+.points-line {
+  margin-top: 10px; text-align: center; font-size: 14px; font-weight: 700;
+  color: #ffe600; animation: dishIn .5s ease-out;
+}
+.challenge-btn {
+  width: 100%; margin-top: 12px; padding: 12px 0;
+  background: rgba(255,230,0,.1); color: #ffe600;
+  border: 1px solid rgba(255,230,0,.5); border-radius: 14px; font-size: 15px; cursor: pointer;
+}
+
+/* ===== 好友投喂横幅 ===== */
+.challenge-banner {
+  margin-bottom: 18px;
+  background: linear-gradient(135deg, rgba(255,45,120,.18), rgba(176,38,255,.18));
+  border: 2px solid rgba(255,45,120,.5);
+  border-radius: 16px; padding: 12px 14px;
+}
+.banner-inner { display: flex; align-items: center; gap: 12px; }
+.banner-emoji { font-size: 34px; }
+.banner-text { flex: 1; }
+.banner-text b { color: #ff2d78; font-size: 16px; }
+.banner-text p { color: #dceaff; font-size: 13px; margin-top: 2px; }
+.accept-btn {
+  flex-shrink: 0; padding: 9px 16px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg,#ff2d78,#b026ff); color: #fff;
+  font-size: 14px; font-weight: 800; cursor: pointer; font-family: inherit;
+}
+
+/* ===== 剩菜博物馆：症状标签 ===== */
+.rank-tabs { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+.rank-tab {
+  padding: 4px 12px; border-radius: 999px; font-size: 12px; cursor: pointer;
+  background: rgba(255,255,255,.05); color: #9db1d4; border: 1px solid rgba(255,255,255,.15);
+  transition: all .15s; font-family: inherit;
+}
+.rank-tab.active { background: rgba(255,230,0,.18); color: #ffe600; border-color: rgba(255,230,0,.5); font-weight: 700; }
+.rank-tag-mini { display: inline-block; margin-top: 8px; padding: 1px 8px; border-radius: 999px; font-size: 10px; color: #9db1d4; background: rgba(255,255,255,.06); }
