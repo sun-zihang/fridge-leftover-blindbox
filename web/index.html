@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>冰箱剩菜盲盒 · AI 深夜食堂</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <h1 class="title neon-flicker">冰箱剩菜盲盒</h1>
+      <p class="subtitle">深夜食堂主厨 · 在线整活</p>
+    </header>
+
+    <section class="input-card">
+      <textarea id="ingredients" maxlength="200" rows="3" placeholder="例如：半个洋葱、两包泡面、一瓶可乐"></textarea>
+      <div class="input-footer">
+        <button id="micBtn" class="mic-btn hidden" type="button">🎙️ 语音输入</button>
+        <span id="charCount" class="char-count">0/200</span>
+      </div>
+    </section>
+
+    <button id="genBtn" class="generate-btn" type="button">召唤主厨 👨‍🍳</button>
+
+    <div id="potLoading" class="pot-loading hidden">
+      <div class="pot">🍲</div>
+      <span class="bubble b1"></span>
+      <span class="bubble b2"></span>
+      <span class="bubble b3"></span>
+      <p class="pot-text">AI 主厨正在脑暴你的剩菜…</p>
+    </div>
+
+    <div id="result" class="result hidden">
+      <h2 id="dishName" class="dish-name neon-pink"></h2>
+      <p id="dishIngredients" class="dish-ingredients"></p>
+
+      <h3 class="section-title">👨‍🍳 做法</h3>
+      <ol id="steps" class="steps"></ol>
+
+      <h3 class="section-title">🍽️ 摆盘建议</h3>
+      <p id="plating" class="plating"></p>
+
+      <h3 class="section-title">⚠️ 主厨警告</h3>
+      <p id="warning" class="warning"></p>
+
+      <div class="rate-row">
+        <span class="rate-title">这菜你觉得？</span>
+        <button class="rate-btn good" data-rating="真香" type="button">真香 😋</button>
+        <button class="rate-btn bad" data-rating="已进医院" type="button">已进医院 🚑</button>
+      </div>
+
+      <button id="posterBtn" class="poster-btn" type="button">生成朋友圈打卡海报 📸</button>
+      <button id="shareBtn" class="share-btn" type="button">分享给好友</button>
+    </div>
+
+    <section id="posterSection" class="poster-section hidden">
+      <canvas id="posterCanvas" width="750" height="1200"></canvas>
+      <div class="poster-actions">
+        <button id="saveBtn" class="action-btn save" type="button">下载海报</button>
+        <button id="sharePosterBtn" class="action-btn share" type="button">分享</button>
+      </div>
+      <p class="tip">把海报发给朋友，让 TA 猜猜你做了什么黑暗料理</p>
+    </section>
+
+    <footer class="footer">Powered by 腾讯云开发 CloudBase · AI 深夜食堂</footer>
+  </div>
+
+  <div id="toast" class="toast hidden"></div>
+
+  <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.x/index.js"></script>
+  <script src="./app.js"></script>
+</body>
+</html>
