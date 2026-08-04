@@ -28,6 +28,17 @@ const BADGES = {
   gens10: { id: '味蕾幸存者', desc: '累计生成 10 道菜' }
 };
 
+// 正常模式 Prompt：家常菜谱，克制、可复现
+const NORMAL_PROMPT =
+  '你是一位擅长家常菜的家庭大厨。用户给你冰箱里的食材，请给出一个正常、好做、能吃的菜谱。' +
+  '要求：菜名正常靠谱，步骤清晰（3步左右），摆盘建议实用，一句贴心的小提示。' +
+  '语气轻松自然即可，不要黑暗料理、不要夸张整活。' +
+  '请严格以 JSON 格式输出：' +
+  '{"name": "正常的菜名，不超过10个字",' +
+  '"steps": ["步骤1", "步骤2", "步骤3"],' +
+  '"plating": "简单实用的摆盘建议",' +
+  '"warning": "一句贴心的注意事项"}';
+
 const SYSTEM_PROMPT =
   '你是一位拥有米其林三星实力，但性格幽默、热爱互联网冲浪的"深夜食堂主厨"。' +
   '用户会给你几种冰箱里快过期的奇葩食材，你需要将它们组合成一道菜。' +
@@ -143,16 +154,17 @@ function stylesView(p) {
 
 // ---------- AI 生成 ----------
 
-async function generate(ingredients, style) {
+async function generate(ingredients, style, mode) {
   const model = ai.createModel('cloudbase');
   let recipe = null;
   let lastError = '';
   const stylePrompt = (style && style.id !== 'classic') ? STYLE_PROMPTS[style.id] : '';
+  const basePrompt = mode === 'normal' ? NORMAL_PROMPT : SYSTEM_PROMPT;
 
   for (let i = 0; i < 3; i++) {
     try {
       const messages = [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: basePrompt },
         { role: 'user', content: '我的食材是：' + ingredients }
       ];
       if (stylePrompt) {
@@ -339,7 +351,8 @@ exports.main = async (rawEvent) => {
       return { success: false, error: '该风格尚未解锁，先去攒积分吧' };
     }
 
-    const generated = await generate(ingredients, style);
+    const mode = event.mode === 'normal' ? 'normal' : 'weird';
+    const generated = await generate(ingredients, style, mode);
     const tag = guessTag(generated.recipe);
 
     const addRes = await db.collection('recipes').add({

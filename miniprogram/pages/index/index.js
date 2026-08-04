@@ -9,6 +9,7 @@ Page({
     player: null,
     styles: [],
     styleId: 'classic',
+    mode: 'weird',
     rankData: [],
     rankTabs: ['全部'],
     rankTag: '全部',
@@ -86,6 +87,9 @@ Page({
       if (r.success) this.setData({ player: r.data.player, styles: r.data.styles });
     });
   },
+  selectMode(e) {
+    this.setData({ mode: e.currentTarget.dataset.mode });
+  },
   selectStyle(e) {
     const id = e.currentTarget.dataset.id;
     const st = (this.data.styles || []).find((x) => x.id === id);
@@ -120,7 +124,7 @@ Page({
     if (!ingredients) { wx.showToast({ title: '先告诉我冰箱里有什么', icon: 'none' }); return; }
     this.setData({ generating: true });
     this.startPotText(ingredients);
-    callFn('generateRecipe', { action: 'generate', ingredients, style: this.data.styleId }).then((r) => {
+    callFn('generateRecipe', { action: 'generate', ingredients, style: this.data.styleId, mode: this.data.mode }).then((r) => {
       this.stopPotText();
       this.setData({ generating: false });
       if (!r.success) { wx.showToast({ title: r.error || '生成失败', icon: 'none' }); return; }

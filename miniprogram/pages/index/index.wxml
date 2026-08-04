@@ -37,6 +37,15 @@
     </scroll-view>
   </view>
 
+  <!-- 菜谱口味模式 -->
+  <view class="mode-row">
+    <text class="mode-label">菜谱口味</text>
+    <view class="mode-switch">
+      <view class="mode-btn {{mode === 'weird' ? 'active' : ''}}" data-mode="weird" bindtap="selectMode">🤪 猎奇整活</view>
+      <view class="mode-btn {{mode === 'normal' ? 'active' : ''}}" data-mode="normal" bindtap="selectMode">🍚 正常家常</view>
+    </view>
+  </view>
+
   <button class="generate-btn" bindtap="onGenerate" hover-class="btn-hover">召唤主厨 👨‍🍳</button>
 
   <!-- 召唤主厨后的烹饪小剧场 -->

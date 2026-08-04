@@ -8,7 +8,7 @@
   var isDemo = !CLOUD_ENV_ID || CLOUD_ENV_ID === 'YOUR_ENV_ID';
 
   var cloudApp = null;
-var state = { recipe: null, recordId: '', rated: false, generating: false, styleId: 'classic', player: null, styles: [], rankData: [], rankTag: '全部', posterSkin: 'normal', challengeId: '' };
+var state = { recipe: null, recordId: '', rated: false, generating: false, styleId: 'classic', mode: 'weird', player: null, styles: [], rankData: [], rankTag: '全部', posterSkin: 'normal', challengeId: '' };
 
   function $(id) { return document.getElementById(id); }
   var els = {
@@ -40,6 +40,7 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     rankList: $('rankList'),
     guideToggle: $('guideToggle'),
     guideBody: $('guideBody'),
+    modeBtns: document.querySelectorAll('.mode-btn'),
     rankModal: $('rankModal'),
     rankModalClose: $('rankModalClose'),
     rankModalEmoji: $('rankModalEmoji'),
@@ -237,6 +238,14 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     els.guideToggle.classList.toggle('open', !closed);
   });
 
+  /* ===== 菜谱口味模式切换 ===== */
+  els.modeBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.mode = btn.getAttribute('data-mode');
+      els.modeBtns.forEach(function (b) { b.classList.toggle('active', b === btn); });
+    });
+  });
+
   /* ===== 输入 ===== */
   els.ingredients.addEventListener('input', function () {
     els.charCount.textContent = els.ingredients.value.length + '/200';
@@ -365,7 +374,7 @@ recognition.interimResults = true;
       return;
     }
 
-    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'generate', ingredients: text, style: state.styleId } })
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'generate', ingredients: text, style: state.styleId, mode: state.mode } })
       .then(function (res) {
         var r = res && res.result ? res.result : {};
         if (!r.success) throw new Error(r.error || '生成失败');
