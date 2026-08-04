@@ -1,6 +1,6 @@
 App({
   globalData: {
-    envId: 'a455-d3g2s3dt865d86640',
+    envId: 'fridge-blindbox-d9foky90cf58fa93',
     recipe: null,          // 从 index 传给 create / poster
     recordId: '',
     posterSkin: 'normal',  // normal | cert | medical
