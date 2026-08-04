@@ -375,23 +375,55 @@
     }
   });
 
-  /* ===== 红黑榜（数据库无数据/失败时回退演示数据） ===== */
+  /* ===== 红黑榜（数据库无数据/失败时回退演示数据；随机抽取+洗牌增加多样性与随机性） ===== */
+  var RANK_MAX_ITEMS = 10;
+
+  // 演示菜池：每次加载随机抽取展示，保证刷新后榜单不固定
   var RANK_DEMO = [
     { emoji: '🤯', dish: '可乐泡面布丁', comment: '吃完我的脑子开始唱RAP，医院的WiFi还不错。', rating: '已进医院' },
     { emoji: '😋', dish: '酸奶炸鸡', comment: '本来以为是黑暗料理，结果吃出了米其林的错觉。', rating: '真香' },
     { emoji: '🚑', dish: '老干妈西瓜汤', comment: '人生建议：西瓜和辣椒酱是前任关系，别复合。', rating: '已进医院' },
     { emoji: '✨', dish: '香蕉咖喱炒饭', comment: '甜咸永动机，一碗下去直接通宵改论文。', rating: '真香' },
     { emoji: '💀', dish: '抹茶螺蛳粉', comment: '颜色很治愈，味道很致郁。', rating: '已进医院' },
-    { emoji: '🔥', dish: '薯片煎蛋', comment: '脆脆的像在吃黄金，就是有点费下巴。', rating: '真香' }
+    { emoji: '🔥', dish: '薯片煎蛋', comment: '脆脆的像在吃黄金，就是有点费下巴。', rating: '真香' },
+    { emoji: '🧀', dish: '芝士泡面披萨', comment: '拉丝能拉一公里，吃完拉链也拉不上。', rating: '真香' },
+    { emoji: '🍌', dish: '巧克力香蕉汤', comment: '甜到牙疼，却有种初恋的心动。', rating: '真香' },
+    { emoji: '🥤', dish: '雪碧拍黄瓜', comment: '气泡在嘴里炸开，像极了人生的起起落落。', rating: '真香' },
+    { emoji: '🍇', dish: '葡萄酒卤蛋', comment: '卤蛋都有微醺感了，你还在清醒地上班。', rating: '已进医院' },
+    { emoji: '🥜', dish: '花生酱拌豆腐', comment: '口感诡异但上头，吃完想给厨师鼓掌。', rating: '真香' },
+    { emoji: '🍵', dish: '茉莉花茶泡饭', comment: '清淡到怀疑人生，适合给钱包和胃同时减负。', rating: '真香' },
+    { emoji: '🍊', dish: '橘子皮炒肉', comment: '吃出了黑暗料理界的米其林，也吃出了牙酸。', rating: '已进医院' },
+    { emoji: '🧊', dish: '冰可乐煮汤圆', comment: '汤圆在可乐里泡澡，甜到糖尿病预警。', rating: '已进医院' },
+    { emoji: '🥚', dish: '皮蛋拌酸奶', comment: '视觉上像灾难片，味觉上是科幻片。', rating: '已进医院' },
+    { emoji: '🍜', dish: '老坛酸菜泡面布丁', comment: '酸爽到灵魂出窍，医院的床很软。', rating: '已进医院' },
+    { emoji: '🥔', dish: '土豆泥奶茶', comment: '奶茶里喝出淀粉，口感像极了人生。', rating: '真香' },
+    { emoji: '🍯', dish: '蜂蜜芥末炸鸡', comment: '甜辣交织，比前任的心情还复杂。', rating: '真香' }
   ];
 
+  // Fisher-Yates 洗牌
+  function shuffleRank(arr) {
+    var a = arr.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i];
+      a[i] = a[j];
+      a[j] = t;
+    }
+    return a;
+  }
+
+  // 从演示菜池随机抽取 count 条
+  function randomRankItems(count) {
+    return shuffleRank(RANK_DEMO).slice(0, count);
+  }
+
   function loadRank() {
-    if (isDemo || !cloudApp) { renderRank(RANK_DEMO); return; }
+    if (isDemo || !cloudApp) { renderRank(randomRankItems(RANK_MAX_ITEMS)); return; }
     cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'listRank' } })
       .then(function (res) {
         var r = res && res.result ? res.result : {};
         if (!r.success || !Array.isArray(r.data)) throw new Error((r && r.error) || '红黑榜加载失败');
-        var items = r.data.map(function (item) {
+        var real = r.data.map(function (item) {
           return {
             emoji: item.rating === '已进医院' ? '🚑' : '😋',
             dish: item.name || '未命名料理',
@@ -399,14 +431,21 @@
             rating: item.rating || '待评价'
           };
         });
-        renderRank(items.length ? items : RANK_DEMO);
+        var items;
+        if (real.length >= RANK_MAX_ITEMS) {
+          // 真实评价足够多：随机洗牌后取前 N 条
+          items = shuffleRank(real).slice(0, RANK_MAX_ITEMS);
+        } else {
+          // 真实评价不足：用演示数据随机补足，榜单每次都不同
+          items = shuffleRank(real.concat(randomRankItems(RANK_MAX_ITEMS - real.length)));
+        }
+        renderRank(items);
       })
       .catch(function (err) {
         console.warn('listRank failed:', err);
-        renderRank(RANK_DEMO);
+        renderRank(randomRankItems(RANK_MAX_ITEMS));
       });
   }
-
   function renderRank(items) {
     els.rankList.textContent = '';
     items.forEach(function (item) {
