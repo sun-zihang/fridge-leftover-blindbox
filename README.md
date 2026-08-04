@@ -9,17 +9,21 @@
 - 📖 **结果展示**：霓虹菜名、卡片式做法、斜体摆盘建议、红色主厨警告；支持「真香 / 已进医院」评价。
 - 📸 **海报生成**：Canvas 绘制赛博朋克风打卡海报，可下载 / 系统分享。
 - 🔥 **黑暗料理红黑榜**：接入云数据库 `recipes` 展示真实评价；空数据或未配置环境时自动回退演示数据。
+- 📖 **内置 206 道家常菜谱库**（蒸馏自「厨房小课堂」公开食谱）：正常家常模式按食材匹配出菜，AI 失败时兜底。
+- 🧾 **详细菜单制作界面**：食材清单 / 备菜准备 / 分步做法 / 预计用时 / 主厨小贴士，一键查看完整菜单。
 
 ## 🧱 技术架构
 - 前端：原生 HTML + CSS + JS（零构建、零依赖），CloudBase JS SDK 走 CDN。
 - 后端：腾讯云开发 CloudBase（Serverless 云函数 + 静态网站托管 + 云数据库）。
-- AI：云函数 `generateRecipe` 内通过 `@cloudbase/node-sdk` 的 `app.ai()` 调用托管大模型（默认 `deepseek-v4-flash`）。
+- AI：云函数 `generateRecipe` 内通过 `@cloudbase/node-sdk` 的 `app.ai()` 调用托管大模型（默认 `qwen3.5-flash`，体验版可直接启用）。
+- 菜谱库：`normalRecipes.js`（UMD）三端共用——云函数 normal 模式匹配/兜底、网页与小程序的演示模式均从此库出菜。
 
 ## 📁 项目结构
 ```
 ├── web/                        # 网页版前端（部署到静态托管）
 │   ├── index.html
 │   ├── style.css
+│   ├── normalRecipes.js           # 内置家常菜谱库（206 道）
 │   └── app.js
 ├── cloudfunctions/
 │   └── generateRecipe/         # AI 生成菜谱云函数（generate / rate / listRank）
@@ -91,7 +95,7 @@ tcb hosting deploy ./web --env-id <envId> --yes
 ```bash
 node --check web/app.js
 node --check cloudfunctions/generateRecipe/index.js
-node --test cloudfunctions/generateRecipe/test/recipe.test.js
+node --test "cloudfunctions/generateRecipe/test/*.test.js"
 ```
 
 ## 🧪 微信小程序版（可选）
