@@ -39,3 +39,8 @@ page { background: #0a0e1a; color: #e6f7ff; }
 .page { padding-bottom: calc(60rpx + env(safe-area-inset-bottom)); }
 .rate-btn, .poster-btn, .challenge-btn, .share-btn { min-height: 44px; }
 @media screen and (max-width: 320px) { .dish-name { font-size: 38px; } }
+
+
+/* ===== UI 打磨 ===== */
+@keyframes dishPop { 0% { transform: scale(.7); opacity: 0; } 60% { transform: scale(1.06); opacity: 1; } 100% { transform: scale(1); } }
+.dish-name { animation: dishPop .5s ease-out; }

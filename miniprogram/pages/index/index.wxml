@@ -1,5 +1,6 @@
 <view class="page">
   <view class="hero">
+    <view class="hero-emoji">🍲🧄🥬🍅</view>
     <view class="title neon">冰箱剩菜盲盒</view>
     <view class="subtitle">深夜食堂主厨 · 在线整活</view>
     <button class="guide-btn" bindtap="openGuide" hover-class="btn-hover">❓ 怎么玩</button>
@@ -32,7 +33,7 @@
     <text class="style-label">主厨风格</text>
     <scroll-view scroll-x class="style-scroll">
       <view class="style-list">
-        <view class="style-chip {{item.id === styleId ? 'selected' : ''}} {{item.unlocked ? '' : 'locked'}}" wx:for="{{styles}}" wx:key="id" data-id="{{item.id}}" bindtap="selectStyle">{{item.name}}{{item.unlocked ? '' : ' 🔒' + item.cost}}</view>
+        <view class="style-chip {{item.id === styleId ? 'selected' : ''}} {{item.unlocked ? '' : 'locked'}}" wx:for="{{styles}}" wx:key="id" data-id="{{item.id}}" bindtap="selectStyle" hover-class="tap-hover">{{item.name}}{{item.unlocked ? '' : ' 🔒' + item.cost}}</view>
       </view>
     </scroll-view>
   </view>
@@ -74,10 +75,10 @@
     <view class="rank-title">🏛️ 剩菜博物馆</view>
     <view class="rank-sub">全网最离谱菜谱大赏 · 按症状分类</view>
     <scroll-view scroll-x class="rank-tabs">
-      <view class="rank-tab {{item === rankTag ? 'active' : ''}}" wx:for="{{rankTabs}}" wx:key="*this" data-tag="{{item}}" bindtap="onRankTab">{{item}}</view>
+      <view class="rank-tab {{item === rankTag ? 'active' : ''}}" wx:for="{{rankTabs}}" wx:key="*this" data-tag="{{item}}" bindtap="onRankTab" hover-class="tap-hover">{{item}}</view>
     </scroll-view>
     <scroll-view scroll-x class="rank-scroll" enhanced show-scrollbar="{{false}}">
-      <view class="rank-item" wx:for="{{rankData}}" wx:key="index" data-index="{{index}}" bindtap="onRankTap">
+      <view class="rank-item" wx:for="{{rankData}}" wx:key="index" data-index="{{index}}" bindtap="onRankTap" hover-class="tap-hover">
         <view class="rank-emoji">{{item.rating === '已进医院' ? '🚑' : '😋'}}</view>
         <view class="rank-dish">{{item.name}}</view>
         <view class="rank-comment">{{item.warning}}</view>
@@ -87,6 +88,7 @@
         </view>
       </view>
     </scroll-view>
+    <view class="rank-empty" wx:if="{{rankData.length === 0}}">还没有战报，来整活第一道菜吧 🍳</view>
   </view>
 
   <!-- 玩法速览弹层 -->

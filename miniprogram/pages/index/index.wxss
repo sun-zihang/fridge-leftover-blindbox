@@ -154,3 +154,9 @@ page { background: #0a0e1a; color: #e6f7ff; font-size: 15px; }
 .mode-switch { display: inline-flex; background: rgba(255,255,255,.05); border-radius: 999rpx; padding: 4rpx; }
 .mode-btn { padding: 8rpx 28rpx; border-radius: 999rpx; font-size: 13px; color: #9db1d4; }
 .mode-btn.active { background: linear-gradient(135deg,#00f0ff,#b026ff); color: #0a0e1a; font-weight: 800; }
+
+
+/* ===== UI 打磨 ===== */
+.hero-emoji { font-size: 46px; letter-spacing: 20rpx; margin-bottom: 8rpx; text-align: center; }
+.title { text-shadow: 0 0 16px rgba(0,240,255,.95), 0 0 40px rgba(0,240,255,.5); }
+.rank-empty { text-align: center; color: #5b6c8c; font-size: 13px; padding: 40rpx 0; }

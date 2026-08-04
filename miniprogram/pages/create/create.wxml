@@ -15,11 +15,11 @@
     <view class="points-line" wx:if="{{pointsLine}}">{{pointsLine}}</view>
     <view class="dish-ingredients" wx:if="{{ingredients}}">食材：{{ingredients}}</view>
 
-    <view class="section-toggle" bindtap="toggleSteps">
+    <view class="section-toggle" bindtap="toggleSteps" hover-class="tap-hover">
       <text>👨‍🍳 轻触查看做法</text><text class="chev {{stepsOpen ? 'open' : ''}}">▾</text>
     </view>
     <view class="collapsible" wx:if="{{stepsOpen}}">
-      <view class="step-card" wx:for="{{recipe.steps}}" wx:key="index" data-index="{{index}}" bindtap="flipStep">
+      <view class="step-card" wx:for="{{recipe.steps}}" wx:key="index" data-index="{{index}}" bindtap="flipStep" hover-class="tap-hover">
         <view class="step-inner {{item.flipped ? 'flipped' : ''}}">
           <view class="step-face step-front">
             <text class="step-num">{{index + 1}}</text>
@@ -35,15 +35,15 @@
     <view class="section-title">🍽️ 摆盘建议</view>
     <view class="plating">“{{recipe.plating}}”</view>
 
-    <view class="section-toggle" bindtap="toggleWarning">
+    <view class="section-toggle" bindtap="toggleWarning" hover-class="tap-hover">
       <text>⚠️ 轻触查看主厨警告</text><text class="chev {{warningOpen ? 'open' : ''}}">▾</text>
     </view>
     <view class="warning" wx:if="{{warningOpen}}">{{recipe.warning}}</view>
 
     <view class="rate-row">
       <text class="rate-title">这菜你觉得？</text>
-      <button class="rate-btn good" size="mini" data-rating="真香" bindtap="rate">真香 😋</button>
-      <button class="rate-btn bad" size="mini" data-rating="已进医院" bindtap="rate">已进医院 🚑</button>
+      <button class="rate-btn good" size="mini" data-rating="真香" bindtap="rate" hover-class="tap-hover">真香 😋</button>
+      <button class="rate-btn bad" size="mini" data-rating="已进医院" bindtap="rate" hover-class="tap-hover">已进医院 🚑</button>
     </view>
 
     <button class="poster-btn" bindtap="goPoster" hover-class="btn-hover">{{posterBtnText}}</button>
