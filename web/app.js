@@ -43,16 +43,32 @@
   }
 
   /* ===== 云初始化（尽力而为，失败自动进演示模式） ===== */
+  // 返回 Promise：resolve(true) 表示已登录可用云能力，resolve(false) 表示走演示模式。
+  // 必须先 await 匿名登录完成再调用云函数，否则会报 "you can't request without auth"。
   function initCloud() {
-    if (isDemo || typeof cloudbase === 'undefined') return;
+    if (isDemo || typeof cloudbase === 'undefined') return Promise.resolve(false);
     try {
       cloudApp = cloudbase.init({ env: CLOUD_ENV_ID, region: CLOUD_REGION });
-      var auth = cloudApp.auth;
-      if (auth && auth.anonymousAuthProvider) {
-        auth.anonymousAuthProvider().signIn().catch(function () {});
+      var auth = cloudApp.auth();
+      var signInPromise;
+      if (auth && typeof auth.signInAnonymously === 'function') {
+        // SDK 2.x 匿名登录 API
+        signInPromise = auth.signInAnonymously();
+      } else if (auth && auth.anonymousAuthProvider && typeof auth.anonymousAuthProvider === 'function') {
+        // 旧版 SDK 兼容
+        signInPromise = auth.anonymousAuthProvider().signIn();
+      } else {
+        signInPromise = Promise.resolve();
       }
+      return signInPromise
+        .then(function () { return true; })
+        .catch(function (e) {
+          console.warn('anonymous sign-in failed:', e);
+          return false;
+        });
     } catch (e) {
       console.warn('cloud init failed:', e);
+      return Promise.resolve(false);
     }
   }
 
@@ -126,7 +142,13 @@
         els.genBtn.disabled = false;
         els.genBtn.textContent = '召唤主厨 👨‍🍳';
         els.potLoading.classList.add('hidden');
-        toast((err && err.message) ? err.message : '生成失败，请稍后重试');
+        var msg = (err && err.message) ? err.message : '生成失败，请稍后重试';
+        if (msg.indexOf('PERMISSION_DENIED') >= 0) {
+          msg = '云函数权限未开启：请在控制台为 generateRecipe 开启「所有用户可调用」';
+        } else if (msg.indexOf('without auth') >= 0) {
+          msg = '未登录：请在云开发控制台开启「匿名登录」';
+        }
+        toast(msg);
       });
   }
 
@@ -417,8 +439,8 @@
     return shuffleRank(RANK_DEMO).slice(0, count);
   }
 
-  function loadRank() {
-    if (isDemo || !cloudApp) { renderRank(randomRankItems(RANK_MAX_ITEMS)); return; }
+  function loadRank(cloudReady) {
+    if (isDemo || !cloudReady || !cloudApp) { renderRank(randomRankItems(RANK_MAX_ITEMS)); return; }
     cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'listRank' } })
       .then(function (res) {
         var r = res && res.result ? res.result : {};
@@ -476,6 +498,7 @@
     });
   }
 
-  initCloud();
-  loadRank();
+  initCloud().then(function (ready) {
+    loadRank(ready);
+  });
 })();
