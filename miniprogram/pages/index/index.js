@@ -92,10 +92,26 @@ Page({
     if (!st) return;
     if (!st.unlocked) {
       const need = st.cost - (this.data.player ? this.data.player.points : 0);
-      wx.showToast({ title: '积分不足，还差 ' + need + ' 分', icon: 'none' });
+      if (need > 0) {
+        wx.showToast({ title: '积分不足，还差 ' + need + ' 分', icon: 'none' });
+        return;
+      }
+      // 积分足够 -> 直接解锁并选中
+      this.unlockStyle(id);
       return;
     }
     this.setData({ styleId: id });
+  },
+  unlockStyle(styleId) {
+    wx.showLoading({ title: '解锁中…', mask: true });
+    callFn('generateRecipe', { action: 'unlockStyle', styleId: styleId }).then((r) => {
+      wx.hideLoading();
+      if (!r.success) { wx.showToast({ title: r.error || '解锁失败', icon: 'none' }); return; }
+      let nm = '';
+      ((r.data && r.data.styles) || []).forEach((x) => { if (x.id === styleId) nm = x.name; });
+      this.setData({ styleId: styleId, player: r.data.player, styles: r.data.styles });
+      wx.showToast({ title: '已解锁：' + (nm || '新风格'), icon: 'success' });
+    });
   },
 
   // ----- 生成 -----
