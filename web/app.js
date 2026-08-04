@@ -38,6 +38,8 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     sharePosterBtn: $('sharePosterBtn'),
     toast: $('toast'),
     rankList: $('rankList'),
+    guideToggle: $('guideToggle'),
+    guideBody: $('guideBody'),
     rankModal: $('rankModal'),
     rankModalClose: $('rankModalClose'),
     rankModalEmoji: $('rankModalEmoji'),
@@ -228,6 +230,12 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
       .catch(function (e) { toast((e && e.message) ? e.message : '甩锅失败'); });
   });
   els.acceptChallengeBtn.addEventListener('click', acceptChallengeFlow);
+
+  /* ===== 玩法速览折叠 ===== */
+  els.guideToggle.addEventListener('click', function () {
+    var closed = els.guideBody.classList.toggle('hidden');
+    els.guideToggle.classList.toggle('open', !closed);
+  });
 
   /* ===== 输入 ===== */
   els.ingredients.addEventListener('input', function () {

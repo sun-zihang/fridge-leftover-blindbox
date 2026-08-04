@@ -440,3 +440,17 @@ html, body {
 }
 .rank-tab.active { background: rgba(255,230,0,.18); color: #ffe600; border-color: rgba(255,230,0,.5); font-weight: 700; }
 .rank-tag-mini { display: inline-block; margin-top: 8px; padding: 1px 8px; border-radius: 999px; font-size: 10px; color: #9db1d4; background: rgba(255,255,255,.06); }
+
+
+/* ===== 玩法速览 ===== */
+.guide-section { margin-top: 18px; background: rgba(20,28,56,.6); border: 2rpx solid rgba(255,230,0,.3); border-radius: 16px; border: 2px solid rgba(255,230,0,.3); }
+.guide-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; background: none; border: none; cursor: pointer; color: #ffe600; font-size: 15px; font-weight: 800; font-family: inherit; padding: 14px 16px; }
+.guide-toggle .chev { color: #8ea2c8; transition: transform .25s; }
+.guide-toggle.open .chev { transform: rotate(180deg); }
+.guide-body { padding: 0 16px 16px; animation: dishIn .35s ease-out; }
+.guide-block { display: grid; gap: 8px; }
+.guide-step { background: rgba(255,255,255,.04); border-radius: 10px; padding: 8px 12px; }
+.guide-step b { color: #00f0ff; margin-right: 8px; }
+.guide-step span { color: #dceaff; font-size: 13px; }
+.guide-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.guide-tags span { font-size: 12px; color: #ffe600; background: rgba(255,230,0,.08); border: 1px solid rgba(255,230,0,.35); border-radius: 999px; padding: 4px 10px; }

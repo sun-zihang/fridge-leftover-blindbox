@@ -2,6 +2,7 @@
   <view class="hero">
     <view class="title neon">冰箱剩菜盲盒</view>
     <view class="subtitle">深夜食堂主厨 · 在线整活</view>
+    <button class="guide-btn" bindtap="openGuide" hover-class="btn-hover">❓ 怎么玩</button>
   </view>
 
   <!-- 生存挑战卡 -->
@@ -77,6 +78,29 @@
         </view>
       </view>
     </scroll-view>
+  </view>
+
+  <!-- 玩法速览弹层 -->
+  <view class="guide-modal" wx:if="{{showGuide}}" bindtap="closeGuide">
+    <view class="guide-card" catchtap="noop">
+      <view class="guide-head">
+        <text class="guide-title">🎉 玩法速览</text>
+        <text class="guide-close" catchtap="closeGuide">✕</text>
+      </view>
+      <scroll-view scroll-y class="guide-scroll">
+        <view class="guide-step"><text class="gs-num">1</text><view class="gs-body"><text class="gs-title">报菜名</text><text class="gs-desc">说出你的剩菜（洋葱、泡面、可乐？越离谱越好）</text></view></view>
+        <view class="guide-step"><text class="gs-num">2</text><view class="gs-body"><text class="gs-title">召唤主厨</text><text class="gs-desc">AI 主厨现场整活：食材满天飞、文案现场编</text></view></view>
+        <view class="guide-step"><text class="gs-num">3</text><view class="gs-body"><text class="gs-title">开盲盒</text><text class="gs-desc">菜名、做法、摆盘、主厨警告一层层揭晓</text></view></view>
+        <view class="guide-step"><text class="gs-num">4</text><view class="gs-body"><text class="gs-title">下结论</text><text class="gs-desc">「真香 😋」还是「已进医院 🚑」，结局你说了算</text></view></view>
+        <view class="guide-tags">
+          <text>🏅 连续7天打卡 → 暗黑料理大师</text>
+          <text>🪙 作死积分解锁限定人设</text>
+          <text>🏆 米其林认证书 / 急诊挂号单</text>
+          <text>🔥 甩锅给好友，双倍积分</text>
+          <text>🏛️ 剩菜博物馆：按症状分类</text>
+        </view>
+      </scroll-view>
+    </view>
   </view>
 
   <view class="footer">Powered by 腾讯云开发 CloudBase · AI 深夜食堂</view>

@@ -18,7 +18,8 @@ Page({
     micText: '',
     generating: false,
     potText: '',
-    flyEmojis: []
+    flyEmojis: [],
+    showGuide: false
   },
 
   onLoad() {
@@ -43,6 +44,10 @@ Page({
     if (this._potTimer) { clearInterval(this._potTimer); this._potTimer = null; }
   },
   onUnload() { this.stopPotText(); },
+
+  openGuide() { this.setData({ showGuide: true }); },
+  closeGuide() { this.setData({ showGuide: false }); },
+  noop() {},
 
   onInput(e) {
     const v = e.detail.value;
