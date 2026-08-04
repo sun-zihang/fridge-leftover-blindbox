@@ -21,8 +21,8 @@ page { background: #0a0e1a; color: #e6f7ff; font-size: 15px; }
 .char-count { margin-left: auto; color: #5b6c8c; font-size: 13px; }
 .style-row { margin-top: 16rpx; display: flex; align-items: center; }
 .style-label { color: #8ea2c8; font-size: 13px; margin-right: 12rpx; flex-shrink: 0; }
-.style-scroll { flex: 1; white-space: nowrap; }
-.style-list { display: inline-flex; }
+.style-scroll { flex: 1; white-space: nowrap; height: 88rpx; overflow: hidden; }
+.style-list { display: inline-flex; align-items: center; height: 100%; }
 .style-chip { display: inline-block; padding: 6rpx 20rpx; border-radius: 999rpx; font-size: 13px; margin-right: 10rpx; background: rgba(255,255,255,.05); color: #9db1d4; border: 1rpx solid rgba(255,255,255,.15); }
 .style-chip.selected { background: linear-gradient(135deg,#00f0ff,#b026ff); color: #0a0e1a; font-weight: 800; border-color: transparent; }
 .style-chip.locked { opacity: .55; }
@@ -30,14 +30,14 @@ page { background: #0a0e1a; color: #e6f7ff; font-size: 15px; }
 .rank-section { margin-top: 40rpx; }
 .rank-title { font-size: 20px; font-weight: 800; color: #ffe600; }
 .rank-sub { margin-top: 4rpx; color: #5b6c8c; font-size: 13px; }
-.rank-tabs { margin-top: 14rpx; white-space: nowrap; }
-.rank-tab { display: inline-block; padding: 6rpx 20rpx; border-radius: 999rpx; font-size: 12px; margin-right: 10rpx; background: rgba(255,255,255,.05); color: #9db1d4; border: 1rpx solid rgba(255,255,255,.15); }
+.rank-tabs { margin-top: 14rpx; white-space: nowrap; height: 60rpx; overflow: hidden; }
+.rank-tab { display: inline-block; height: 56rpx; line-height: 56rpx; padding: 0 20rpx; border-radius: 999rpx; font-size: 12px; margin-right: 10rpx; background: rgba(255,255,255,.05); color: #9db1d4; border: 1rpx solid rgba(255,255,255,.15); }
 .rank-tab.active { background: rgba(255,230,0,.18); color: #ffe600; border-color: rgba(255,230,0,.5); font-weight: 700; }
-.rank-scroll { margin-top: 14rpx; white-space: nowrap; }
-.rank-item { display: inline-block; width: 300rpx; vertical-align: top; margin-right: 14rpx; padding: 14rpx; background: rgba(20,28,56,.75); border: 2rpx solid rgba(0,240,255,.25); border-radius: 14rpx; }
+.rank-scroll { margin-top: 14rpx; white-space: nowrap; height: 300rpx; overflow: hidden; }
+.rank-item { display: inline-block; width: 300rpx; height: 100%; vertical-align: top; margin-right: 14rpx; padding: 14rpx; overflow: hidden; background: rgba(20,28,56,.75); border: 2rpx solid rgba(0,240,255,.25); border-radius: 14rpx; box-sizing: border-box; }
 .rank-emoji { font-size: 30px; }
 .rank-dish { margin-top: 6rpx; font-size: 16px; font-weight: 700; color: #00f0ff; }
-.rank-comment { margin-top: 6rpx; font-size: 13px; color: #9db1d4; min-height: 60rpx; }
+.rank-comment { margin-top: 6rpx; font-size: 13px; color: #9db1d4; min-height: 60rpx; max-height: 96rpx; overflow: hidden; }
 .rank-foot { margin-top: 10rpx; }
 .rank-tag { padding: 2rpx 12rpx; border-radius: 999rpx; font-size: 12px; font-weight: 700; }
 .tag-good { background: rgba(0,240,160,.15); color: #00f0a0; border: 1rpx solid rgba(0,240,160,.5); }
