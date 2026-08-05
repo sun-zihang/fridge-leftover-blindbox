@@ -16,6 +16,7 @@ const {
 } = require('./recipe');
 const D = require('./duel');
 const NR = require('./normalRecipes');
+const HC = require('./howToCookRecipes');
 
 const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV });
 const ai = app.ai();
@@ -205,13 +206,19 @@ async function generate(ingredients, style, mode, persona) {
   }
   // 随机事件：10% 触发「厨房突发事件」（normal 只允许灵感爆发）
   var evt = maybeEvent(null, mode);
-  // 正常家常模式：优先从内置菜谱库（206 道家常菜）按食材匹配，命中直接返回（含详细菜单字段）
+  // 正常家常模式：优先从内置菜谱库（206 道家常菜 + HowToCook 297 道）按食材匹配，命中直接返回（含详细菜单字段）
   if (mode === 'normal') {
     const hit = NR.matchNormalRecipe(ingredients);
     if (hit) {
       var libR = NR.toAppRecipe(hit);
       if (evt && evt.id === 'inspiration') libR.event = evt;
       return { recipe: libR, fallback: false, fromLib: true, lastError: '' };
+    }
+    const hcHits = HC.matchByIngredients(ingredients);
+    if (hcHits.length) {
+      var libH = HC.toAppRecipe(hcHits[0].recipe);
+      if (evt && evt.id === 'inspiration') libH.event = evt;
+      return { recipe: libH, fallback: false, fromLib: true, lastError: '' };
     }
   }
   const model = ai.createModel('cloudbase');

@@ -907,6 +907,10 @@ recognition.interimResults = true;
         var dm = window.IDDZZ_RECIPES.matchByIngredients(ingredients);
         if (dm.length) return window.IDDZZ_RECIPES.toAppRecipe(dm[0].recipe);
       }
+      if (window.HOWTOCOOK_RECIPES) {
+        var hm = window.HOWTOCOOK_RECIPES.matchByIngredients(ingredients);
+        if (hm.length) return window.HOWTOCOOK_RECIPES.toAppRecipe(hm[0].recipe);
+      }
       if (window.NORMAL_RECIPES) return window.NORMAL_RECIPES.getNormalAppRecipe(ingredients);
     }
     var pool = [
