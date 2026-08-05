@@ -10,7 +10,8 @@
 const tcb = require('@cloudbase/node-sdk');
 const {
   fallbackRecipe, normalFallbackRecipe, extractJson, normalizeRecipe,
-  STYLES, STYLE_PROMPTS, guessTag, calcPoints
+  STYLES, STYLE_PROMPTS, guessTag, calcPoints,
+  heuristicDarkScore, darkTier, findDangerWarnings, dailyChallenge, parseIngredients
 } = require('./recipe');
 const NR = require('./normalRecipes');
 
@@ -19,6 +20,7 @@ const ai = app.ai();
 const db = app.database();
 
 const MODEL = 'hy3'; // 腾讯混元（内置免费国产 AI，体验版默认启用，实测约 2~4s 返回）；备选 qwen3.5-flash（通义千问）
+const VISION_MODEL = 'qwen3.5-plus'; // 多模态识别（图片输入），仅拍照识别食材时使用
 const CHALLENGE_BONUS = 20;
 const HTTP_TOKEN = 'fridge-blindbox-secret-2026'; // 小程序 HTTP 桥接共享密钥
 
@@ -38,7 +40,9 @@ const NORMAL_PROMPT =
   '{"name": "正常的菜名，不超过10个字",' +
   '"steps": ["步骤1", "步骤2", "步骤3"],' +
   '"plating": "简单实用的摆盘建议",' +
-  '"warning": "一句贴心的注意事项"}';
+  '"warning": "一句贴心的注意事项",' +
+  '"darkScore": 0到100之间的整数（0=家常正常，100=极端黑暗料理，正常家常菜一般在0-30）,' +
+  '"shoppingList": ["还需要额外采购的调料或食材，没有则给空数组"]}';
 
 const SYSTEM_PROMPT =
   '你是一位拥有米其林三星实力，但性格幽默、热爱互联网冲浪的"深夜食堂主厨"。' +
@@ -48,7 +52,9 @@ const SYSTEM_PROMPT =
   '{"name": "包含谐音梗或网络热词的菜名，不超过10个字",' +
   '"steps": ["步骤1（脱口秀语气）", "步骤2", "步骤3"],' +
   '"plating": "极其夸张或搞笑的摆盘建议",' +
-  '"warning": "一句话提醒这道菜的风险或注意事项"}';
+  '"warning": "一句话提醒这道菜的风险或注意事项",' +
+  '"darkScore": 0到100之间的整数（0=最安全，100=绝对生化武器，根据食材奇葩程度和翻车风险打分）,' +
+  '"shoppingList": ["这道菜还需要额外采购的调料/食材，没有则给空数组"]}';
 
 // ---------- 工具 ----------
 
@@ -87,6 +93,19 @@ function getUid(event) {
 }
 function wrap(d) {
   return d && d.data && typeof d.data === 'object' ? d.data : d;
+}
+// 兼容不同 SDK 返回的 _id 形态（string / { $oid } / { oid }）
+function recId(d) {
+  if (!d) return '';
+  if (typeof d._id === 'string' && d._id) return d._id;
+  if (d._id && typeof d._id === 'object') {
+    var o = d._id;
+    if (typeof o.$oid === 'string') return o.$oid;
+    if (typeof o.oid === 'string') return o.oid;
+    if (typeof o._id === 'string') return o._id;
+  }
+  if (typeof d.id === 'string' && d.id) return d.id;
+  return '';
 }
 async function ensureCollection(name) {
   try { await db.createCollection(name); }
@@ -194,12 +213,24 @@ async function generate(ingredients, style, mode) {
   }
 
   if (!recipe) {
-    if (mode === 'normal') {
-      return { recipe: normalFallbackRecipe(ingredients), fallback: true, fromLib: true, lastError: lastError };
-    }
-    return { recipe: fallbackRecipe(), fallback: true, lastError: lastError };
+    const fb = mode === 'normal'
+      ? normalFallbackRecipe(ingredients)
+      : fallbackRecipe();
+    return decorate(fb, ingredients, mode, true, mode === 'normal', lastError);
   }
-  return { recipe: recipe, fallback: false, fromLib: false, lastError: lastError };
+  return decorate(recipe, ingredients, mode, false, false, lastError);
+}
+
+// 给菜谱补齐黑暗指数/危险高亮/购物清单（AI 没给就用启发式兜底）
+function decorate(recipe, ingredients, mode, fallback, fromLib, lastError) {
+  var r = Object.assign({}, recipe);
+  if (typeof r.darkScore !== 'number') {
+    r.darkScore = heuristicDarkScore(ingredients, r, mode);
+  }
+  r.darkTier = darkTier(r.darkScore);
+  r.dangerFlags = findDangerWarnings(ingredients, r);
+  if (!Array.isArray(r.shoppingList)) r.shoppingList = [];
+  return { recipe: r, fallback: fallback, fromLib: fromLib, lastError: lastError || '' };
 }
 
 // ---------- 红黑榜 / 博物馆 ----------
@@ -209,28 +240,76 @@ async function listRank(tag) {
     .limit(200)
     .get();
   const rated = (res.data || [])
-    .map(function (r) { return wrap(r); })
+    .map(function (r) {
+      // 文档结构为 { _id, data:{...} }，wrap 会取出 data，需把 _id 补回
+      var w = wrap(r);
+      if (w) {
+        if (!w._id && r) w._id = r._id || r.id || '';
+        if (w.user_rating === undefined && r && r.data && r.data.user_rating !== undefined) {
+          w.user_rating = r.data.user_rating;
+        }
+      }
+      return w;
+    })
     .filter(function (d) {
       return d.user_rating === '真香' || d.user_rating === '已进医院';
     })
     .filter(function (d) { return !tag || d.tag === tag; })
     .sort(function (a, b) {
+      // 投票置顶：票数越高越靠前（带随机扰动保持榜单多样性），同票按时间倒序
+      const va = voteNet(a), vb = voteNet(b);
+      const sa = vb - va;
+      if (sa !== 0) return sa;
       const ta = a.create_time ? new Date(a.create_time).getTime() : 0;
       const tb = b.create_time ? new Date(b.create_time).getTime() : 0;
       return tb - ta;
+    })
+    .map(function (d, i) {
+      const rd = d.recipe_data || {};
+      return {
+        recordId: recId(d),
+        name: typeof rd.name === 'string' && rd.name ? rd.name : '未命名料理',
+        rating: typeof d.user_rating === 'string' ? d.user_rating : '',
+        warning: typeof rd.warning === 'string' ? rd.warning : '',
+        ingredients: typeof d.ingredients === 'string' ? d.ingredients : '',
+        tag: typeof d.tag === 'string' ? d.tag : '硬核养生',
+        recipe_data: rd,
+        votes: { up: d.votes_up || 0, down: d.votes_down || 0, net: voteNet(d) },
+        darkScore: typeof rd.darkScore === 'number' ? rd.darkScore : null,
+        dangerFlags: Array.isArray(rd.dangerFlags) ? rd.dangerFlags : []
+      };
     });
-  return rated.slice(0, 30).map(function (d) {
-    const rd = d.recipe_data || {};
-    return {
-      recordId: typeof d._id === 'string' ? d._id : '',
-      name: typeof rd.name === 'string' && rd.name ? rd.name : '未命名料理',
-      rating: typeof d.user_rating === 'string' ? d.user_rating : '',
-      warning: typeof rd.warning === 'string' ? rd.warning : '',
-      ingredients: typeof d.ingredients === 'string' ? d.ingredients : '',
-      tag: typeof d.tag === 'string' ? d.tag : '硬核养生',
-      recipe_data: rd
-    };
+  // 随机扰动：同票段内洗一下，避免榜单每刷新都一样
+  var shuffled = [];
+  var bucket = [];
+  rated.forEach(function (it) {
+    if (bucket.length && bucket[0].votes.net !== it.votes.net) {
+      shuffled = shuffled.concat(shuffleRank(bucket));
+      bucket = [];
+    }
+    bucket.push(it);
   });
+  shuffled = shuffled.concat(shuffleRank(bucket));
+  return shuffled.slice(0, 30);
+}
+async function voteCounts(recordId) {
+  const res = await db.collection('recipes').doc(recordId).get().catch(function () { return { data: null }; });
+  const list = Array.isArray(res.data) ? res.data : (res.data ? [res.data] : []);
+  const rec = list.length ? wrap(list[0]) : null;
+  const up = rec && typeof rec.votes_up === 'number' ? rec.votes_up : 0;
+  const down = rec && typeof rec.votes_down === 'number' ? rec.votes_down : 0;
+  return { up: up, down: down, net: up - down };
+}
+function voteNet(d) {
+  return (d.votes_up || 0) - (d.votes_down || 0);
+}
+function shuffleRank(arr) {
+  var a = arr.slice();
+  for (var i = a.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = a[i]; a[i] = a[j]; a[j] = t;
+  }
+  return a;
 }
 
 // ---------- 主入口 ----------
@@ -274,6 +353,80 @@ exports.main = async (rawEvent) => {
     if (action === 'listRank') {
       const data = await listRank(event.tag);
       return { success: true, data: data };
+    }
+
+    // 每日挑战：系统指定 3 种奇怪食材（按日期确定性轮换）
+    if (action === 'dailyChallenge') {
+      const today = chinaToday();
+      const ch = dailyChallenge(today);
+      const p = await getOrCreatePlayer(uid);
+      const done = p.last_daily === today;
+      return { success: true, data: { date: today, challenge: ch, done: done } };
+    }
+
+    // 给榜单菜谱投票：direction = 'up'（真香）| 'down'（送医），每人每菜一票、可改票
+    if (action === 'vote') {
+      const recordId = event.recordId;
+      const direction = event.direction;
+      if (!recordId || (direction !== 'up' && direction !== 'down')) {
+        return { success: false, error: '参数不合法' };
+      }
+      const value = direction === 'up' ? 1 : -1;
+      const voteId = recordId + ':' + uid;
+      const existed = await db.collection('votes').doc(voteId).get().catch(function () { return { data: null }; });
+      const exList = Array.isArray(existed.data) ? existed.data : (existed.data ? [existed.data] : []);
+      const prev = exList.length ? wrap(exList[0]) : null;
+      let upDelta = 0, downDelta = 0;
+      if (prev && prev.value === value) {
+        return { success: true, data: { votes: await voteCounts(recordId), changed: false } };
+      }
+      if (prev) {
+        if (prev.value === 1) upDelta = -1; else downDelta = -1;
+        await db.collection('votes').doc(voteId).update({ data: { value: value, update_time: db.serverDate() } });
+      } else {
+        await db.collection('votes').doc(voteId).set({ data: { recordId: recordId, uid: uid, value: value, create_time: db.serverDate() } });
+      }
+      if (value === 1) upDelta += 1; else downDelta += 1;
+      const patch = {};
+      if (upDelta) patch.votes_up = db.command.inc(upDelta);
+      if (downDelta) patch.votes_down = db.command.inc(downDelta);
+      await db.collection('recipes').doc(recordId).update({ data: patch });
+      const counts = await voteCounts(recordId);
+      return { success: true, data: { votes: counts, changed: true } };
+    }
+
+    // 拍照识别食材：多模态模型 qwen3.5-plus（hy3 不支持图片输入）
+    if (action === 'recognizeImage') {
+      const image = String((event && event.image) || '');
+      if (!image) return { success: false, error: '缺少图片' };
+      if (image.length > 6.5 * 1024 * 1024) {
+        return { success: false, error: '图片太大，请上传小于 4MB 的图片' };
+      }
+      const model = ai.createModel('cloudbase');
+      let ingredients = [];
+      let errMsg = '';
+      for (let i = 0; i < 2; i++) {
+        try {
+          const result = await model.generateText({
+            model: VISION_MODEL,
+            messages: [{
+              role: 'user',
+              content: [
+                { type: 'text', text: '你是冰箱剩菜识别助手。请识别这张图片里所有可辨认的食材，只输出一个 JSON 字符串数组，例如 ["鸡蛋","剩米饭","番茄"]，不要输出任何解释文字。' },
+                { type: 'image_url', image_url: { url: image } }
+              ]
+            }]
+          });
+          ingredients = parseIngredients(result.text);
+          if (ingredients.length) break;
+        } catch (e) {
+          errMsg = (e && e.message) ? e.message : String(e);
+        }
+      }
+      if (!ingredients.length) {
+        return { success: false, error: errMsg || '识别失败，请换一张更清晰的图或手输食材' };
+      }
+      return { success: true, data: { ingredients: ingredients } };
     }
 
     // 玩家状态 + 风格模板列表
@@ -376,6 +529,11 @@ exports.main = async (rawEvent) => {
         tag: tag,
         style: style.id,
         creator_uid: uid,
+        dark_score: generated.recipe.darkScore || 0,
+        danger_flags: generated.recipe.dangerFlags || [],
+        shopping_list: generated.recipe.shoppingList || [],
+        votes_up: 0,
+        votes_down: 0,
         create_time: db.serverDate()
       }
     });

@@ -1,7 +1,7 @@
 // 云函数纯逻辑单元测试：node --test cloudfunctions/generateRecipe/test/
 const test = require('node:test');
 const assert = require('node:assert');
-const { fallbackRecipe, extractJson, normalizeRecipe, STYLES, STYLE_PROMPTS, guessTag, calcPoints } = require('../recipe');
+const { fallbackRecipe, extractJson, normalizeRecipe, STYLES, STYLE_PROMPTS, guessTag, calcPoints, heuristicDarkScore, darkTier, findDangerWarnings, dailyChallenge, parseIngredients } = require('../recipe');
 
 const VALID_JSON =
   '{"name":"可乐泡面布丁","steps":["步骤1","步骤2","步骤3"],"plating":"摆盘","warning":"警告"}';
@@ -46,7 +46,9 @@ test('normalizeRecipe: 合法结构去空格规范化', () => {
     name: '薯片煎蛋',
     steps: ['步骤1', '步骤2', '步骤3'],
     plating: '摆盘',
-    warning: '警告'
+    warning: '警告',
+    darkScore: null,
+    shoppingList: []
   });
 });
 
@@ -101,4 +103,50 @@ test('calcPoints: 基础分+连续打卡+评价加成', () => {
   assert.strictEqual(calcPoints({ base: 10, streakBonus: 4, dailyBonus: 5, rating: '真香' }), 34);
   assert.strictEqual(calcPoints({ base: 10, rating: '已进医院' }), 30);
   assert.strictEqual(calcPoints({ base: 10 }), 10);
+});
+
+test('normalizeRecipe: darkScore 夹取 0-100、shoppingList 过滤去重', () => {
+  const r = normalizeRecipe({
+    name: 'A', steps: ['s1'], plating: 'p', warning: 'w',
+    darkScore: 150, shoppingList: ['酱油', '  ', '咖喱块', '咖喱块']
+  });
+  assert.strictEqual(r.darkScore, 100);
+  assert.deepStrictEqual(r.shoppingList, ['酱油', '咖喱块']);
+});
+
+test('heuristicDarkScore: 猎奇高、家常低、范围 0-100', () => {
+  assert.ok(heuristicDarkScore('老干妈、香蕉、皮蛋、可乐', null, 'weird') > 60);
+  assert.ok(heuristicDarkScore('土豆、鸡蛋、胡萝卜', null, 'normal') < 50);
+  assert.ok(heuristicDarkScore('', null, 'normal') >= 0 && heuristicDarkScore('', null, 'weird') <= 100);
+});
+
+test('darkTier: 四档分级（越高越黑暗）', () => {
+  assert.strictEqual(darkTier(10).key, 'safe');
+  assert.strictEqual(darkTier(50).key, 'ok');
+  assert.strictEqual(darkTier(70).key, 'risky');
+  assert.strictEqual(darkTier(95).key, 'bio');
+  assert.strictEqual(darkTier(90).label, '生化武器');
+});
+
+test('findDangerWarnings: 命中危险规则', () => {
+  const d = findDangerWarnings('发芽土豆、河豚', null);
+  assert.ok(d.length >= 2);
+  assert.ok(d.some(function (x) { return x.level === 'danger'; }));
+  assert.strictEqual(findDangerWarnings('鸡蛋、米饭', null).length, 0);
+});
+
+test('dailyChallenge: 按日期确定性轮换', () => {
+  const a = dailyChallenge('2026-08-05');
+  const b = dailyChallenge('2026-08-05');
+  const c = dailyChallenge('2026-08-06');
+  assert.deepStrictEqual(a, b);
+  assert.ok(a.ingredients.length === 3);
+  assert.ok(a.name && a.emoji);
+  assert.notDeepStrictEqual(a, c);
+});
+
+test('parseIngredients: JSON 数组与分隔符文本', () => {
+  assert.deepStrictEqual(parseIngredients('["鸡蛋"," 剩米饭 "," 3. 番茄"]'), ['鸡蛋', '剩米饭', '番茄']);
+  assert.deepStrictEqual(parseIngredients('鸡蛋、土豆\n番茄，洋葱'), ['鸡蛋', '土豆', '番茄', '洋葱']);
+  assert.deepStrictEqual(parseIngredients(''), []);
 });

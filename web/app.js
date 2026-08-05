@@ -63,7 +63,30 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     detailBtn: $('detailBtn'),
     detailModal: $('detailModal'),
     detailModalClose: $('detailModalClose'),
-    detailBody: $('detailBody')
+    detailBody: $('detailBody'),
+    cameraBtn: $('cameraBtn'),
+    cameraInput: $('cameraInput'),
+    dailyCard: $('dailyCard'),
+    dailyTitle: $('dailyTitle'),
+    dailyDesc: $('dailyDesc'),
+    dailyIngredients: $('dailyIngredients'),
+    dailyUseBtn: $('dailyUseBtn'),
+    darkScoreBox: $('darkScoreBox'),
+    darkScoreEmoji: $('darkScoreEmoji'),
+    darkScoreLabel: $('darkScoreLabel'),
+    darkScoreTip: $('darkScoreTip'),
+    darkScoreNum: $('darkScoreNum'),
+    darkScoreFill: $('darkScoreFill'),
+    dangerBox: $('dangerBox'),
+    shoppingBox: $('shoppingBox'),
+    shoppingList: $('shoppingList'),
+    chefLoading: $('chefLoading'),
+    chefResult: $('chefResult'),
+    rankVoteUp: $('rankVoteUp'),
+    rankVoteDown: $('rankVoteDown'),
+    rankVoteUpNum: $('rankVoteUpNum'),
+    rankVoteDownNum: $('rankVoteDownNum'),
+    soundBtn: $('soundBtn')
   };
 
   /* ===== 工具 ===== */
@@ -74,6 +97,125 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     if (toastTimer) clearTimeout(toastTimer);
     toastTimer = setTimeout(function () { els.toast.classList.add('hidden'); }, 2200);
   }
+
+  /* ===== 音效（WebAudio 合成，无外部资源） ===== */
+  var soundOn = localStorage.getItem('fridge_sound') !== 'off';
+  var audioCtx = null;
+  function ac() {
+    if (typeof AudioContext === 'undefined' && typeof webkitAudioContext === 'undefined') return null;
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+  function tone(freq, dur, type, vol, when) {
+    if (!soundOn) return;
+    var ctx = ac();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume();
+    var t0 = ctx.currentTime + (when || 0);
+    var osc = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.type = type || 'sine';
+    osc.frequency.value = freq;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(vol || 0.12, t0 + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.start(t0); osc.stop(t0 + dur + 0.05);
+  }
+  function soundBubble() { tone(320 + Math.random() * 140, 0.12, 'triangle', 0.05); }
+  function soundDing() { tone(660, 0.18, 'sine', 0.12); setTimeout(function () { tone(880, 0.22, 'sine', 0.1, 0.12); }, 120); }
+  function soundAlarm() { tone(220, 0.2, 'sawtooth', 0.08); setTimeout(function () { tone(180, 0.25, 'sawtooth', 0.08, 0.18); }, 180); }
+  function soundPop() { tone(520, 0.08, 'square', 0.07); }
+  function setSound(on) {
+    soundOn = on;
+    localStorage.setItem('fridge_sound', on ? 'on' : 'off');
+    els.soundBtn.textContent = on ? '🔊 音效：开' : '🔇 音效：关';
+    els.soundBtn.classList.toggle('muted', !on);
+  }
+  els.soundBtn.addEventListener('click', function () { setSound(!soundOn); });
+
+  /* ===== 每日挑战（云 / 演示兜底） ===== */
+  var DEMO_DAILY = { name: '老干妈奇袭', emoji: '🌶️', ingredients: ['老干妈', '巧克力', '剩米饭'] };
+  function renderDaily(ch, done) {
+    if (!ch) { els.dailyCard.classList.add('hidden'); return; }
+    els.dailyCard.classList.remove('hidden');
+    els.dailyTitle.textContent = (ch.emoji || '🍽️') + ' 今日挑战：' + (ch.name || '');
+    els.dailyDesc.textContent = done ? '今天已打卡 ✅ 明天再来新食材' : '用下面 3 种食材开一盒盲盒，完成打卡 +5 分';
+    els.dailyIngredients.textContent = '';
+    (ch.ingredients || []).forEach(function (ing) {
+      var chip = document.createElement('span');
+      chip.className = 'daily-ing';
+      chip.textContent = ing;
+      els.dailyIngredients.appendChild(chip);
+    });
+    els.dailyUseBtn.disabled = !!done;
+    els.dailyUseBtn.textContent = done ? '已打卡' : '一键填入';
+  }
+  function loadDaily() {
+    if (isDemo || !cloudApp) { renderDaily(DEMO_DAILY, false); return; }
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'dailyChallenge' } })
+      .then(function (res) {
+        var r = res && res.result ? res.result : {};
+        if (!r.success || !r.data) throw new Error((r && r.error) || '每日挑战加载失败');
+        renderDaily(r.data.challenge, r.data.done);
+      })
+      .catch(function (e) { console.warn('dailyChallenge failed:', e); renderDaily(DEMO_DAILY, false); });
+  }
+  els.dailyUseBtn.addEventListener('click', function () {
+    var ings = [];
+    els.dailyIngredients.querySelectorAll('.daily-ing').forEach(function (el) { ings.push(el.textContent); });
+    if (!ings.length) return;
+    els.ingredients.value = ings.join('、');
+    els.charCount.textContent = els.ingredients.value.length + '/200';
+    toast('今日挑战食材已填入，召唤主厨吧！');
+    els.ingredients.focus();
+  });
+
+  /* ===== 拍照识别食材 ===== */
+  function compressImage(file, cb) {
+    var reader = new FileReader();
+    reader.onload = function () {
+      var img = new Image();
+      img.onload = function () {
+        var maxW = 960;
+        var scale = Math.min(1, maxW / img.width);
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        var ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        cb(canvas.toDataURL('image/jpeg', 0.8));
+      };
+      img.onerror = function () { cb(null); };
+      img.src = reader.result;
+    };
+    reader.onerror = function () { cb(null); };
+    reader.readAsDataURL(file);
+  }
+  els.cameraBtn.addEventListener('click', function () { els.cameraInput.click(); });
+  els.cameraInput.addEventListener('change', function () {
+    var file = els.cameraInput.files && els.cameraInput.files[0];
+    if (!file) return;
+    els.cameraInput.value = '';
+    toast('正在识别图片里的食材…');
+    compressImage(file, function (dataUrl) {
+      if (!dataUrl) { toast('图片处理失败，请换一张'); return; }
+      if (isDemo || !cloudApp) { toast('演示模式不支持识别，请手输食材'); return; }
+      cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'recognizeImage', image: dataUrl } })
+        .then(function (res) {
+          var r = res && res.result ? res.result : {};
+          if (!r.success || !r.data || !r.data.ingredients || !r.data.ingredients.length) {
+            throw new Error((r && r.error) || '没识别出食材，换张更清楚的图吧');
+          }
+          var prev = els.ingredients.value.trim();
+          var next = prev ? prev + '、' + r.data.ingredients.join('、') : r.data.ingredients.join('、');
+          els.ingredients.value = next.slice(0, 200);
+          els.charCount.textContent = els.ingredients.value.length + '/200';
+          toast('识别到 ' + r.data.ingredients.length + ' 种食材：' + r.data.ingredients.join('、'));
+        })
+        .catch(function (e) { toast((e && e.message) ? e.message : '识别失败，请手输食材'); });
+    });
+  });
 
   /* ===== 云初始化（尽力而为，失败自动进演示模式） ===== */
   // 返回 Promise：resolve(true) 表示已登录可用云能力，resolve(false) 表示走演示模式。
@@ -346,8 +488,10 @@ recognition.interimResults = true;
       if (k >= text.length) { clearInterval(typeTimer); typeTimer = null; }
     }, 45);
   }
+  var bubbleTimer = null;
   function startPotShow() {
     els.potLoading.classList.remove('hidden');
+    els.chefLoading.classList.remove('hidden');
     var queue = shuffleArr(LOADING_LINES);
     var idx = 0;
     typeLine(queue[0]);
@@ -356,9 +500,12 @@ recognition.interimResults = true;
       idx = (idx + 1) % queue.length;
       typeLine(queue[idx]);
     }, 2300);
+    if (bubbleTimer) clearInterval(bubbleTimer);
+    bubbleTimer = setInterval(function () { soundBubble(); }, 620);
   }
   function stopPotShow() {
     if (potTimer) { clearInterval(potTimer); potTimer = null; }
+    if (bubbleTimer) { clearInterval(bubbleTimer); bubbleTimer = null; }
     els.potLoading.classList.add('hidden');
   }
 
@@ -459,10 +606,15 @@ recognition.interimResults = true;
     els.potLoading.classList.add('hidden');
 
     els.dishName.textContent = recipe.name;
+    els.result.classList.remove('skin-gold', 'skin-sick');
     els.stepsWrap.classList.add('hidden');
     els.warning.classList.add('hidden');
     els.stepsToggle.classList.remove('open');
     els.warningToggle.classList.remove('open');
+    renderDarkScore(recipe);
+    renderDanger(recipe);
+    renderShopping(recipe);
+    renderChef(recipe);
     els.dishIngredients.textContent = '食材：' + ingredients;
     var hasDetail = recipe.lib || (Array.isArray(recipe.ings) && recipe.ings.length);
     els.libBadge.classList.toggle('hidden', !recipe.lib);
@@ -473,7 +625,101 @@ recognition.interimResults = true;
     els.warning.textContent = recipe.warning;
     els.result.classList.remove('hidden');
     if (isFallback) toast('AI 暂时掉线，先上了一份主厨拿手菜');
+    soundDing();
+    var hasDanger = (recipe.dangerFlags && recipe.dangerFlags.length) || (recipe.darkScore && recipe.darkScore > 80);
+    if (hasDanger) soundAlarm();
     els.result.scrollIntoView({ behavior: 'smooth' });
+  }
+
+  /* ===== 黑暗指数 / 危险高亮 / 购物清单 / 主厨状态 ===== */
+  var DARK_RULES = [
+    { re: /生|半生|未熟|发芽|变味|过期|腐烂|发霉|隔夜|馊/, score: 16 },
+    { re: /皮蛋|榴莲|臭豆腐|螺蛳粉|酸菜|纳豆|秋葵|苦瓜|香菜/, score: 12 },
+    { re: /老干妈|辣椒|辣|芥末|花椒|藤椒/, score: 7 },
+    { re: /可乐|雪碧|汽水|啤酒|红酒|白酒|咖啡|奶茶|巧克力|冰淇淋|酸奶|香蕉|西瓜|芒果/, score: 9 },
+    { re: /泡面|方便面|馒头|剩饭|隔夜饭/, score: 6 }
+  ];
+  function heuristicWeb(ings, mode) {
+    var score = mode === 'normal' ? 25 : 42;
+    DARK_RULES.forEach(function (k) { if (k.re.test(ings)) score += k.score; });
+    return Math.max(0, Math.min(100, score));
+  }
+  var DEMO_DANGER = [
+    { re: /发芽土豆|土豆发芽|变绿/, msg: '⚠️ 发芽/变绿的土豆含龙葵碱，千万别吃！' },
+    { re: /河豚/, msg: '⚠️ 河豚含剧毒，家庭厨房千万别碰！' },
+    { re: /生四季豆|生豆角|未熟豆角/, msg: '⚠️ 四季豆/豆角必须彻底煮熟！' },
+    { re: /野生蘑菇/, msg: '⚠️ 无法辨别的野生蘑菇可能致命！' },
+    { re: /发霉|长毛|腐烂|馊/, msg: '⚠️ 发霉变质的食材建议直接扔掉！' }
+  ];
+  function dangerWeb(ings, recipe) {
+    var text = ings + ' ' + ((recipe && recipe.name) || '') + ' ' + ((recipe && recipe.warning) || '');
+    return DEMO_DANGER.filter(function (r) { return r.re.test(text); }).map(function (r) { return { msg: r.msg, level: 'danger' }; });
+  }
+  function renderDarkScore(recipe) {
+    var score = (typeof recipe.darkScore === 'number') ? recipe.darkScore : heuristicWeb(els.ingredients.value.trim(), state.mode);
+    var tier = recipe.darkTier || darkTierOf(score);
+    els.darkScoreBox.classList.remove('hidden');
+    els.darkScoreEmoji.textContent = tier.emoji;
+    els.darkScoreLabel.textContent = tier.label;
+    els.darkScoreLabel.style.color = tier.color;
+    els.darkScoreTip.textContent = tier.tip;
+    els.darkScoreNum.textContent = score;
+    els.darkScoreNum.style.color = tier.color;
+    setTimeout(function () { els.darkScoreFill.style.width = score + '%'; }, 30);
+  }
+  function darkTierOf(score) {
+    if (score <= 20) return { key: 'safe', label: '家常安全', emoji: '🍚', tip: '放心吃，主厨都夸你懂生活', color: '#4ade80' };
+    if (score < 60) return { key: 'ok', label: '家常凑合', emoji: '🍽️', tip: '饿极了可以吃，味道看缘分', color: '#ffd700' };
+    if (score <= 80) return { key: 'risky', label: '黑暗料理', emoji: '💀', tip: '能吃，但请做好心理建设', color: '#ff7f27' };
+    return { key: 'bio', label: '生化武器', emoji: '☣️', tip: '建议直接扔掉，别挑战生命极限', color: '#ff2d55' };
+  }
+  function renderDanger(recipe) {
+    els.dangerBox.textContent = '';
+    var flags = recipe.dangerFlags || dangerWeb(els.ingredients.value.trim(), recipe);
+    if (flags.length) {
+      flags.forEach(function (f) {
+        var item = document.createElement('div');
+        item.className = 'danger-item';
+        item.textContent = (typeof f === 'string' ? f : (f && f.msg)) || '';
+        els.dangerBox.appendChild(item);
+      });
+      els.dangerBox.classList.remove('hidden');
+    } else {
+      els.dangerBox.classList.add('hidden');
+    }
+  }
+  function renderShopping(recipe) {
+    els.shoppingList.textContent = '';
+    var list = recipe.shoppingList || [];
+    if (list.length) {
+      list.forEach(function (item) {
+        var chip = document.createElement('span');
+        chip.className = 'shopping-item';
+        chip.textContent = '☐ ' + item;
+        chip.addEventListener('click', function () {
+          var checked = chip.classList.toggle('checked');
+          chip.textContent = (checked ? '☑ ' : '☐ ') + item;
+          soundPop();
+        });
+        els.shoppingList.appendChild(chip);
+      });
+      els.shoppingBox.classList.remove('hidden');
+    } else {
+      els.shoppingBox.classList.add('hidden');
+    }
+  }
+  function renderChef(recipe) {
+    var score = (typeof recipe.darkScore === 'number') ? recipe.darkScore : 50;
+    els.chefResult.classList.remove('sweat', 'cool');
+    if (score > 80) {
+      els.chefResult.textContent = '🥴';
+      els.chefResult.classList.add('sweat');
+    } else if (score <= 20) {
+      els.chefResult.textContent = '😎';
+      els.chefResult.classList.add('cool');
+    } else {
+      els.chefResult.textContent = '👨‍🍳';
+    }
   }
 
   /* ===== 演示模式兜底 ===== */
@@ -555,6 +801,9 @@ recognition.interimResults = true;
       if (state.rated) return;
       if (isDemo || !cloudApp) {
         state.rated = true;
+        els.result.classList.remove('skin-gold', 'skin-sick');
+        els.result.classList.add(rating === '真香' ? 'skin-gold' : 'skin-sick');
+        if (rating === '已进医院') soundAlarm(); else soundDing();
         toast('演示模式：已评价 ' + rating);
         return;
       }
@@ -564,6 +813,9 @@ recognition.interimResults = true;
           var r = res && res.result ? res.result : {};
           if (!r.success) throw new Error(r.error || '评价失败');
           state.rated = true;
+          els.result.classList.remove('skin-gold', 'skin-sick');
+          els.result.classList.add(rating === '真香' ? 'skin-gold' : 'skin-sick');
+          if (rating === '已进医院') soundAlarm(); else soundDing();
           toast('评价成功');
           state.posterSkin = rating === '真香' ? 'cert' : 'medical';
           els.posterBtn.textContent = rating === '真香' ? '生成米其林认证书 🏆' : '生成急诊挂号单 🏥';
@@ -638,6 +890,7 @@ recognition.interimResults = true;
       '“米其林看了沉默，主厨看了落泪…”'
     ];
     ctx.fillText(TEASERS[Math.floor(Math.random() * TEASERS.length)], W / 2, 235);
+    drawQrCode(ctx, W - 190, 112, 120);
     glowText(ctx, recipe.name, W / 2, 300, 'bold 64px sans-serif', '#ff2d78', 30);
 
     if (ingredients) {
@@ -831,6 +1084,31 @@ recognition.interimResults = true;
     ctx.fillText('冰箱剩菜盲盒 · 深夜食堂出品', W / 2, 1110);
   }
 
+  function drawQrCode(ctx, x, y, size) {
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x, y, size, size);
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x, y, size, size);
+    ctx.fillStyle = '#333';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('📱', x + size / 2, y + size / 2 - 4);
+    ctx.font = '16px sans-serif';
+    ctx.fillText('扫码开盲盒', x + size / 2, y + size / 2 + 22);
+    ctx.restore();
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function () {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x, y, size, size);
+      ctx.drawImage(img, x, y, size, size);
+    };
+    img.onerror = function () { /* 保留占位 */ };
+    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(location.href);
+  }
+
   function glowText(ctx, text, x, y, font, color, blur) {
     ctx.save();
     ctx.font = font;
@@ -988,7 +1266,11 @@ recognition.interimResults = true;
             comment: item.warning || (item.ingredients ? '食材：' + item.ingredients : ''),
             rating: item.rating || '待评价',
             tag: item.tag || '硬核养生',
-            recipe_data: item.recipe_data || null
+            recipe_data: item.recipe_data || null,
+            recordId: item.recordId || '',
+            votes: item.votes || { up: 0, down: 0, net: 0 },
+            darkScore: item.darkScore,
+            dangerFlags: item.dangerFlags || []
           };
         });
         var items;
@@ -1042,6 +1324,7 @@ recognition.interimResults = true;
       els.rankList.appendChild(card);
       card.tabIndex = 0;
       card.setAttribute('role', 'button');
+      card.setAttribute('data-recordid', item.recordId || '');
       card.addEventListener('click', function () { openRankModal(item); });
       card.addEventListener('keydown', function (e) {
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openRankModal(item); }
@@ -1052,6 +1335,7 @@ recognition.interimResults = true;
   /* ===== 红黑榜：点击看大图 ===== */
   function openRankModal(item) {
     if (!item) return;
+    state.rankModalItem = item;
     els.rankModalEmoji.textContent = item.emoji || '🍽️';
     els.rankModalDish.textContent = item.dish || '';
     els.rankModalTag.textContent = item.rating || '';
@@ -1061,8 +1345,35 @@ recognition.interimResults = true;
     var hasRecipe = !!(rd && Array.isArray(rd.steps) && rd.steps.length);
     state.rankDetailRecipe = hasRecipe ? rd : null;
     els.rankDetailBtn.classList.toggle('hidden', !hasRecipe);
+    renderRankVotes(item.votes || { up: 0, down: 0, net: 0 });
     els.rankModal.classList.remove('hidden');
   }
+  function renderRankVotes(votes) {
+    votes = votes || { up: 0, down: 0 };
+    els.rankVoteUpNum.textContent = votes.up || 0;
+    els.rankVoteDownNum.textContent = votes.down || 0;
+  }
+  function castVote(direction) {
+    var item = state.rankModalItem;
+    if (!item || !item.recordId) { toast('演示数据暂不能投票'); return; }
+    if (isDemo || !cloudApp) { toast('演示模式暂不能投票'); return; }
+    var btn = direction === 'up' ? els.rankVoteUp : els.rankVoteDown;
+    btn.disabled = true;
+    soundPop();
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'vote', recordId: item.recordId, direction: direction } })
+      .then(function (res) {
+        btn.disabled = false;
+        var r = res && res.result ? res.result : {};
+        if (!r.success) throw new Error(r.error || '投票失败');
+        renderRankVotes(r.data.votes);
+        if (item.votes) item.votes = r.data.votes;
+        toast(direction === 'up' ? '👍 真香票 +1' : '🤢 送医票 +1');
+        loadRank(true); // 刷新榜单让置顶生效
+      })
+      .catch(function (e) { btn.disabled = false; toast((e && e.message) ? e.message : '投票失败'); });
+  }
+  els.rankVoteUp.addEventListener('click', function () { castVote('up'); });
+  els.rankVoteDown.addEventListener('click', function () { castVote('down'); });
   function closeRankModal() {
     els.rankModal.classList.add('hidden');
   }
@@ -1192,6 +1503,7 @@ recognition.interimResults = true;
 
   initCloud().then(function (ready) {
     loadRank(ready);
+    loadDaily();
     if (!isDemo && cloudApp) {
       loadPlayer();
       handleChallengeParam();

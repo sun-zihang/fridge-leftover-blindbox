@@ -52,10 +52,24 @@
       <textarea id="ingredients" maxlength="200" rows="3" placeholder="例如：半个洋葱、两包泡面、一瓶可乐"></textarea>
       <div class="input-footer">
         <button id="micBtn" class="mic-btn hidden" type="button">🎙️ 语音输入</button>
+        <button id="cameraBtn" class="mic-btn" type="button">📷 拍照识别</button>
+        <input id="cameraInput" type="file" accept="image/*" capture="environment" hidden>
         <span id="micWave" class="mic-wave hidden" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></span>
         <span id="micHint" class="mic-hint hidden">正在聆听，说出你的剩菜…</span>
         <span id="charCount" class="char-count">0/200</span>
       </div>
+    </section>
+
+    <section id="dailyCard" class="daily-card hidden">
+      <div class="daily-head">
+        <span class="daily-emoji">🍽️</span>
+        <div class="daily-text">
+          <b id="dailyTitle">今日挑战</b>
+          <p id="dailyDesc">用指定 3 种食材开一盒盲盒</p>
+        </div>
+        <button id="dailyUseBtn" class="daily-use-btn" type="button">一键填入</button>
+      </div>
+      <div id="dailyIngredients" class="daily-ings"></div>
     </section>
 
     <section id="challengeCard" class="challenge-card hidden">
@@ -79,10 +93,14 @@
       </div>
     </div>
 
+    <div class="sound-row">
+      <button id="soundBtn" class="sound-btn" type="button">🔊 音效：开</button>
+    </div>
     <button id="genBtn" class="generate-btn" type="button">召唤主厨 👨‍🍳</button>
 
     <div id="potLoading" class="pot-loading hidden">
       <div class="pot-scene">
+        <div id="chefLoading" class="chef-avatar chef-loading">👨‍🍳</div>
         <div class="pot">🍲</div>
         <span class="ing i1">🥔</span>
         <span class="ing i2">🌽</span>
@@ -99,7 +117,27 @@
 
     <div id="result" class="result hidden">
       <h2 id="dishName" class="dish-name neon-pink"></h2>
+      <div id="chefResult" class="chef-avatar chef-result">👨‍🍳</div>
       <p id="dishIngredients" class="dish-ingredients"></p>
+
+      <div id="darkScoreBox" class="dark-score-box hidden">
+        <div class="dark-score-head">
+          <span id="darkScoreEmoji" class="dark-score-emoji">💀</span>
+          <div class="dark-score-meta">
+            <b id="darkScoreLabel" class="dark-score-label">黑暗料理</b>
+            <span id="darkScoreTip" class="dark-score-tip"></span>
+          </div>
+          <span id="darkScoreNum" class="dark-score-num">50</span>
+        </div>
+        <div class="dark-score-bar"><i id="darkScoreFill"></i></div>
+      </div>
+
+      <div id="dangerBox" class="danger-box hidden"></div>
+
+      <div id="shoppingBox" class="shopping-box hidden">
+        <div class="shopping-head">🛒 主厨采购清单 <span class="shopping-sub">勾选要去买的</span></div>
+        <div id="shoppingList" class="shopping-list"></div>
+      </div>
       <p id="pointsLine" class="points-line hidden"></p>
       <p id="libBadge" class="lib-badge hidden">📖 家常菜谱库精选</p>
 
@@ -148,6 +186,7 @@
     Powered by 腾讯云开发 CloudBase · AI 深夜食堂
     <br>
     <a class="source-link" href="https://github.com/sun-zihang/fridge-leftover-blindbox" target="_blank" rel="noopener">🔗 源码 GitHub</a>
+    <p class="disclaimer">⚠️ 免责声明：本应用为娱乐向 AI 创意工具，所有菜谱/警告仅供娱乐参考，请以食品安全为准。食材如有变质、发芽、异味请直接丢弃；对不熟悉的食材请先确认食用安全性。生食/半熟食材、特殊人群（孕妇/儿童/过敏体质）请谨慎。</p>
   </footer>
   </div>
 
@@ -167,6 +206,10 @@
       <div id="rankModalDish" class="rank-modal-dish"></div>
       <div id="rankModalTag" class="rank-modal-tag tag-good"></div>
       <p id="rankModalComment" class="rank-modal-comment"></p>
+      <div class="rank-vote-row">
+        <button id="rankVoteUp" class="rank-vote-btn vote-up" type="button">👍 真香票 <span id="rankVoteUpNum">0</span></button>
+        <button id="rankVoteDown" class="rank-vote-btn vote-down" type="button">🤢 送医票 <span id="rankVoteDownNum">0</span></button>
+      </div>
       <button id="rankDetailBtn" class="rank-detail-btn hidden" type="button">📖 查看制作过程</button>
       <p class="rank-modal-foot">🔥 来自冰箱剩菜盲盒 · 深夜食堂战报</p>
     </div>
