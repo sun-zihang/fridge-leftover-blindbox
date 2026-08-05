@@ -996,46 +996,52 @@ recognition.interimResults = true;
     drawQrCode(ctx, W - 190, 112, 120);
     glowText(ctx, recipe.name, W / 2, 300, 'bold 64px sans-serif', '#ff2d78', 30);
 
+    // 内容区流式布局：逐段往下排，超长截断；空间不足则跳过段落，绝不压到页脚（H-200 以下）
+    var contentMax = H - 200;
+    var yy = 360;
     if (ingredients) {
       ctx.fillStyle = '#8ea2c8';
       ctx.font = '28px sans-serif';
-      wrapText(ctx, '食材：' + ingredients, 60, 360, W - 120, 40, 'center');
+      yy = wrapText(ctx, '食材：' + shortenText(ingredients, 60), 60, yy + 34, W - 120, 40, 'center') + 12;
+    } else {
+      yy += 70;
     }
 
-    // 做法
-    var yy = 470;
+    // 做法（最多到 contentMax-90，给摆盘/警告留位）
     ctx.fillStyle = '#ffe600';
     ctx.font = 'bold 34px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText('🧑‍🍳 做法', 70, yy);
-    yy += 60;
+    yy += 56;
     (recipe.steps || []).forEach(function (s, i) {
-      if (yy > 820) return;
+      if (yy > contentMax - 90) return;
       ctx.fillStyle = '#00f0ff';
       ctx.font = 'bold 30px sans-serif';
       ctx.fillText(String(i + 1), 80, yy);
       ctx.fillStyle = '#dceaff';
       ctx.font = '28px sans-serif';
-      yy = wrapText(ctx, s, 130, yy, W - 210, 42, 'left') + 26;
+      yy = wrapText(ctx, shortenText(s, 70), 130, yy, W - 210, 38, 'left') + 12;
     });
 
-    // 摆盘建议
-    yy += 10;
-    ctx.fillStyle = '#ffe600';
-    ctx.font = 'bold 34px sans-serif';
-    ctx.fillText('🍽️ 摆盘建议', 70, yy);
-    ctx.fillStyle = '#ffe600';
-    ctx.font = 'italic 30px sans-serif';
-    yy = wrapText(ctx, '“' + (recipe.plating || '') + '”', 70, yy + 40, W - 140, 42, 'left') + 26;
+    // 摆盘建议（空间不足跳过）
+    yy += 12;
+    if (yy < contentMax - 90) {
+      ctx.fillStyle = '#ffe600';
+      ctx.font = 'bold 34px sans-serif';
+      ctx.fillText('🍽️ 摆盘建议', 70, yy);
+      yy = wrapText(ctx, '“' + shortenText(recipe.plating || '', 50) + '”', 70, yy + 38, W - 140, 36, 'left') + 10;
+    }
 
-    // 主厨警告
+    // 主厨警告（空间不足跳过）
     yy += 10;
-    ctx.fillStyle = '#ff4d4f';
-    ctx.font = 'bold 34px sans-serif';
-    ctx.fillText('⚠️ 主厨警告', 70, yy);
-    ctx.fillStyle = '#ff6b6b';
-    ctx.font = '28px sans-serif';
-    wrapText(ctx, recipe.warning || '', 70, yy + 40, W - 140, 40, 'left');
+    if (yy < contentMax - 50) {
+      ctx.fillStyle = '#ff4d4f';
+      ctx.font = 'bold 34px sans-serif';
+      ctx.fillText('⚠️ 主厨警告', 70, yy);
+      ctx.fillStyle = '#ff6b6b';
+      ctx.font = '26px sans-serif';
+      wrapText(ctx, shortenText(recipe.warning || '', 40), 70, yy + 34, W - 140, 32, 'left');
+    }
 
     // 底部
     ctx.strokeStyle = 'rgba(255,255,255,0.25)';
@@ -1094,14 +1100,14 @@ recognition.interimResults = true;
     if (ingredients) {
       ctx.fillStyle = '#8ea2c8';
       ctx.font = '28px sans-serif';
-      wrapText(ctx, '食材：' + ingredients, 90, 500, W - 180, 42, 'center');
+      wrapText(ctx, '食材：' + shortenText(ingredients, 50), 90, 500, W - 180, 42, 'center');
     }
     ctx.fillStyle = '#d4af37';
     ctx.font = 'bold 32px sans-serif';
     ctx.fillText('评审委员会意见', W / 2, 640);
     ctx.fillStyle = '#e8e0c8';
     ctx.font = '28px sans-serif';
-    wrapText(ctx, '“' + (recipe.plating || '') + '”', 90, 700, W - 180, 44, 'center');
+    wrapText(ctx, '“' + shortenText(recipe.plating || '', 50) + '”', 90, 700, W - 180, 44, 'center');
     ctx.fillStyle = '#b98a5a';
     wrapText(ctx, '摆盘大胆，风味狂野，堪称黑暗料理界的清流。', 90, 820, W - 180, 40, 'center');
     ctx.fillStyle = '#d4af37';
@@ -1155,13 +1161,13 @@ recognition.interimResults = true;
     row('就诊人：', '勇敢的剩菜勇士', 340);
     row('主    诉：', '“我让 AI 用冰箱剩菜做了顿饭”', 410);
     row('诊    断：', recipe.name, 500, '#c8102e');
-    row('食    材：', ingredients, 580);
+    row('食    材：', shortenText(ingredients, 40), 580);
     ctx.font = '30px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillStyle = '#333';
     ctx.fillText('医    嘱：', 80, 700);
     ctx.fillStyle = '#c8102e';
-    wrapText(ctx, recipe.warning || '', 260, 700, W - 360, 44, 'left');
+    wrapText(ctx, shortenText(recipe.warning || '', 60), 260, 700, W - 360, 44, 'left');
     ctx.fillStyle = '#333';
     wrapText(ctx, '建议：多喝热水，别让朋友知道，下次别这样了。', 260, 830, W - 360, 40, 'left');
     ctx.save();
@@ -1229,12 +1235,12 @@ recognition.interimResults = true;
     if (ingredients) {
       ctx.fillStyle = '#c9a0b0';
       ctx.font = '28px sans-serif';
-      wrapText(ctx, '罪证食材：' + ingredients, 90, 520, W - 180, 40, 'center');
+      wrapText(ctx, '罪证食材：' + shortenText(ingredients, 40), 90, 520, W - 180, 40, 'center');
     }
     // 主厨警告
     ctx.fillStyle = '#ff9aa8';
     ctx.font = '26px sans-serif';
-    wrapText(ctx, '主厨警告：' + (recipe.warning || ''), 90, 600, W - 180, 38, 'center');
+    wrapText(ctx, '主厨警告：' + shortenText(recipe.warning || '', 60), 90, 600, W - 180, 38, 'center');
     // 二维码：扫了直接接锅
     var link = state.challengeLink || location.href;
     drawQrCode(ctx, W - 190, 740, 140, link);
@@ -1296,6 +1302,12 @@ recognition.interimResults = true;
     ctx.fillStyle = color;
     ctx.fillText(text, x, y);
     ctx.restore();
+  }
+
+  function shortenText(text, max) {
+    if (!text) return '';
+    var s = String(text);
+    return s.length > max ? s.slice(0, max) + '…' : s;
   }
 
   function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
