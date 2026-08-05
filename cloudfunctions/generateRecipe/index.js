@@ -206,7 +206,7 @@ async function generate(ingredients, style, mode, persona) {
   }
   // 随机事件：10% 触发「厨房突发事件」（normal 只允许灵感爆发）
   var evt = maybeEvent(null, mode);
-  // 正常家常模式：优先从内置菜谱库（206 道家常菜 + HowToCook 297 道）按食材匹配，命中直接返回（含详细菜单字段）
+  // 正常家常模式：优先从内置菜谱库（206 道家常菜 + HowToCook 298 道）按食材匹配，命中直接返回（含详细菜单字段）
   if (mode === 'normal') {
     const hit = NR.matchNormalRecipe(ingredients);
     if (hit) {

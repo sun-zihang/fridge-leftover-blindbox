@@ -16,7 +16,7 @@
 - 👍 **红黑榜投票**：给榜单菜谱投「真香票 / 送医票」，票数置顶。
 - 📸 **海报生成**：Canvas 赛博朋克打卡海报（含二维码，5:8 自适应）+ 米其林认证书 + 急诊挂号单皮肤，可下载/分享。
 - 🔥 **黑暗料理红黑榜**：接入云数据库 recipes 展示真实评价；空数据或未配置环境时自动回退演示数据。
-- 📖 **内置 648 道家常菜谱库（145 iddzz 带演示视频 + 297 HowToCook + 206 家常）**：正常家常模式按「iddzz → HowToCook → 家常库」三级食材匹配出菜，AI 失败时兜底。
+- 📖 **内置 649 道家常菜谱库（145 iddzz 带演示视频 + 298 HowToCook + 206 家常）**：正常家常模式按「iddzz → HowToCook → 家常库」三级食材匹配出菜，AI 失败时兜底。
 - 🧾 **详细菜单制作界面**：食材清单 / 备菜准备 / 分步做法 / 预计用时 / 主厨小贴士。
 - 🛡️ **免责声明**：底部食品免责提示，娱乐向内容不构成饮食建议。
 - ⚔️ **双人盲盒对局**：创建/加入房间（6 位房间码 + 邀请链接），双方各报 3 样以上食材 → 自动交换一颗「炸弹食材」→ 同时让 AI 出菜 → 审判阶段双菜并排揭晓、互打「离谱分」，分高者赢；输家三选一惩罚（发朋友圈文案 / 换头像 1 小时 / 下局用指定食材），可「再来一局」。
@@ -28,7 +28,7 @@
 - 前端：原生 HTML + CSS + JS（零构建、零依赖），CloudBase JS SDK 走 CDN。
 - 后端：腾讯云开发 CloudBase（Serverless 云函数 + 静态网站托管 + 云数据库）。
 - AI：云函数 `generateRecipe` 内通过 `@cloudbase/node-sdk` 的 `app.ai()` 调用托管大模型（默认 `hy3` 腾讯混元，内置免费国产 AI，体验版可直接启用；备选 `qwen3.5-flash` 通义千问）。
-- 菜谱库：`iddzzRecipes.js`（145 道，含 B 站演示视频）+ `howToCookRecipes.js`（297 道，来源 Anduin2017/HowToCook，Unlicense 公有领域）+ `normalRecipes.js`（206 道），均为 UMD 三端共用——normal 模式按 iddzz → HowToCook → 家常库三级匹配，AI 失败时兜底。
+- 菜谱库：`iddzzRecipes.js`（145 道，含 B 站演示视频）+ `howToCookRecipes.js`（298 道，来源 Anduin2017/HowToCook，Unlicense 公有领域）+ `normalRecipes.js`（206 道），均为 UMD 三端共用——normal 模式按 iddzz → HowToCook → 家常库三级匹配，AI 失败时兜底。
 
 - 对局状态机：`duel.js`（纯逻辑、可单测）——lobby→swap→cook→judge→done 五阶段，懒超时判负、心跳断线检测、平票平局、再来一局；`rooms` 集合存房间状态，网页端 watch 只读，写入全走云函数。
 ## 📁 项目结构
@@ -38,7 +38,7 @@
 │   ├── style.css
 │   ├── normalRecipes.js           # 内置家常菜谱库（206 道）
 │   ├── iddzzRecipes.js            # iddzz 菜谱库（145 道，含 B 站演示视频）
-│   ├── howToCookRecipes.js        # HowToCook 菜谱库（297 道，Unlicense）
+│   ├── howToCookRecipes.js        # HowToCook 菜谱库（298 道，Unlicense）
 │   └── app.js
 ├── cloudfunctions/
 │   └── generateRecipe/         # AI 生成菜谱云函数（generate+persona/synth / rate / listRank / dailyChallenge / vote / recognizeImage）
@@ -46,7 +46,7 @@
 │       ├── recipe.js           # 纯逻辑（JSON 提取/校验/兜底），可本地单测
 │       ├── duel.js             # 双人对局纯状态机（lobby/swap/cook/judge/done）
 │       ├── normalRecipes.js     # 家常菜谱库（206 道，与 web 同步）
-│       ├── howToCookRecipes.js  # HowToCook 菜谱库（297 道，与 web 同步）
+│       ├── howToCookRecipes.js  # HowToCook 菜谱库（298 道，与 web 同步）
 │       ├── config.json
 │       ├── package.json
 │       └── test/recipe.test.js  # 单元测试（node --test）
