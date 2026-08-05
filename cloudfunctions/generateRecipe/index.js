@@ -18,7 +18,7 @@ const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV });
 const ai = app.ai();
 const db = app.database();
 
-const MODEL = 'qwen3.5-flash'; // 通义千问：体验版可启用（DeepSeek 需升级标准版）
+const MODEL = 'hy3'; // 腾讯混元（内置免费国产 AI，体验版默认启用，实测约 2~4s 返回）；备选 qwen3.5-flash（通义千问）
 const CHALLENGE_BONUS = 20;
 const HTTP_TOKEN = 'fridge-blindbox-secret-2026'; // 小程序 HTTP 桥接共享密钥
 

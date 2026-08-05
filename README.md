@@ -15,7 +15,7 @@
 ## 🧱 技术架构
 - 前端：原生 HTML + CSS + JS（零构建、零依赖），CloudBase JS SDK 走 CDN。
 - 后端：腾讯云开发 CloudBase（Serverless 云函数 + 静态网站托管 + 云数据库）。
-- AI：云函数 `generateRecipe` 内通过 `@cloudbase/node-sdk` 的 `app.ai()` 调用托管大模型（默认 `qwen3.5-flash`，体验版可直接启用）。
+- AI：云函数 `generateRecipe` 内通过 `@cloudbase/node-sdk` 的 `app.ai()` 调用托管大模型（默认 `hy3` 腾讯混元，内置免费国产 AI，体验版可直接启用；备选 `qwen3.5-flash` 通义千问）。
 - 菜谱库：`normalRecipes.js`（UMD）三端共用——云函数 normal 模式匹配/兜底、网页与小程序的演示模式均从此库出菜。
 
 ## 📁 项目结构
@@ -60,7 +60,7 @@ var CLOUD_REGION = 'ap-shanghai';   // 环境地域（与云函数一致）
 
 ### 4. 启用 AI 模型（TokenHub）
 1. 云开发控制台 → AI → Token 资源包，确认已开通（未开通按提示领取/购买）。
-2. 云开发控制台 → AI 模型 → 启用 `deepseek-v4-flash`（默认没有启用）。
+2. 云开发控制台 → AI 模型 → 确认 `hy3`（腾讯混元）已启用（体验版默认启用、无需额外付费；如未启用可勾选开启）。
    - 可在 `cloudfunctions/generateRecipe/index.js` 顶部的 `MODEL` 常量切换其他模型（需先在控制台启用）。
 
 ### 5. 网页访问前置
@@ -130,7 +130,7 @@ project.config.json                # miniprogramRoot / cloudfunctionRoot
 
 
 ## 🐛 常见问题
-- **云函数调用失败 / 报错 model not enabled**：按上文第 4 步启用模型并确认 Token 资源包已开通。
+- **云函数调用失败 / 报错 model not enabled**：按上文第 4 步在控制台启用 `hy3` 模型并确认套餐有效（体验版含 3000 资源点/月，可直接抵扣）。
 - **网页无法调用云函数（权限/CORS）**：确认匿名登录已开启、Web 安全域名已添加。
 - **匿名用户调用云函数报 `PERMISSION_DENIED`**：云开发控制台 → 云函数 → 函数列表 → 该函数行内「权限控制」→ 将 `invoke` 规则设为 `true`（即「所有用户可调用」）→ 确定，保存后约 1–3 分钟生效。
 - **海报空白 / 下载异常**：请使用较新的 Chrome/Edge；演示模式与云模式走同一 Canvas 绘制逻辑。

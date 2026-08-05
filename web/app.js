@@ -81,7 +81,7 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
   function initCloud() {
     if (isDemo || typeof cloudbase === 'undefined') return Promise.resolve(false);
     try {
-      // timeout: 60s —— AI 生成（qwen3.5-flash）偶尔超过 SDK 默认 15s，避免请求被中断
+      // timeout: 60s —— AI 生成（hy3 混元 / qwen3.5-flash）偶尔超过 SDK 默认 15s，避免请求被中断
       cloudApp = cloudbase.init({ env: CLOUD_ENV_ID, region: CLOUD_REGION, timeout: 60000 });
       var auth = cloudApp.auth();
       var signInPromise;

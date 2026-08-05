@@ -61,5 +61,5 @@
 ---
 
 ## 备注
-- 云函数中调用 AI 使用 CloudBase TokenHub 托管模型（`@cloudbase/node-sdk` 的 `app.ai()`），默认模型 `deepseek-v4-flash`，可在云开发控制台启用/切换。
+- 云函数中调用 AI 使用 CloudBase TokenHub 托管模型（`@cloudbase/node-sdk` 的 `app.ai()`），默认模型 `hy3`（腾讯混元，内置免费国产 AI），可在云开发控制台启用/切换。
 - 语音输入优先使用「微信同声传译」插件（WechatSI）做语音转文字，未配置插件时回退为原生录音。
