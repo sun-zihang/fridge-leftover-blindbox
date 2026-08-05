@@ -248,6 +248,27 @@
     </div>
   </div>
 
+  <button id="buyFab" class="buy-fab" type="button" aria-label="买菜">🛒</button>
+
+  <div id="buyModal" class="buy-modal hidden">
+    <div class="buy-modal-backdrop"></div>
+    <div class="buy-modal-card">
+      <button id="buyModalClose" class="buy-modal-close" type="button" aria-label="关闭">×</button>
+      <div class="buy-modal-head">🛒 买菜去哪家？</div>
+      <p class="buy-modal-sub">把刚生成的菜谱变成现实，一键去下单</p>
+      <a class="buy-platform mt" href="https://waimai.meituan.com/" target="_blank" rel="noopener">
+        <span class="buy-p-emoji">🟡</span><span class="buy-p-name">美团外卖</span><span class="buy-p-arrow">›</span>
+      </a>
+      <a class="buy-platform elm" href="https://www.ele.me/" target="_blank" rel="noopener">
+        <span class="buy-p-emoji">🔵</span><span class="buy-p-name">饿了么</span><span class="buy-p-arrow">›</span>
+      </a>
+      <a class="buy-platform jd" href="https://www.jddj.com/" target="_blank" rel="noopener">
+        <span class="buy-p-emoji">🛒</span><span class="buy-p-name">京东到家</span><span class="buy-p-arrow">›</span>
+      </a>
+      <p class="buy-modal-tip">小提示：别忘了带上前面的「主厨采购清单」哦～</p>
+    </div>
+  </div>
+
   <div id="toast" class="toast hidden"></div>
 
   <script src="https://static.cloudbase.net/cloudbase-js-sdk/2.17.3/cloudbase.full.js"></script>

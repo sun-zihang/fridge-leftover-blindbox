@@ -732,3 +732,52 @@ html, body {
 .delivery-link.elm { background: rgba(0,145,255,.2); border: 1px solid rgba(0,145,255,.55); color: #bfe0ff; }
 .delivery-link.jd { background: rgba(255,45,85,.2); border: 1px solid rgba(255,45,85,.55); color: #ffc2cd; }
 .delivery-link:hover { transform: translateY(-1px); }
+
+/* ===== 悬浮买菜按钮（随时可点，安全区适配） ===== */
+.buy-fab {
+  position: fixed; right: 18px; bottom: calc(22px + env(safe-area-inset-bottom));
+  width: 58px; height: 58px; border-radius: 50%; border: none; cursor: pointer;
+  font-size: 26px; line-height: 1; z-index: 90;
+  background: linear-gradient(135deg, #ff8a00, #ff2d78);
+  box-shadow: 0 6px 22px rgba(255,45,120,.45);
+  transition: transform .15s;
+  display: flex; align-items: center; justify-content: center;
+}
+.buy-fab:hover { transform: scale(1.08); }
+.buy-fab:active { transform: scale(.95); }
+
+/* ===== 买菜弹层 ===== */
+.buy-modal {
+  position: fixed; inset: 0; z-index: 120;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.buy-modal-backdrop { position: absolute; inset: 0; background: rgba(5,8,20,.72); }
+.buy-modal-card {
+  position: relative; width: 100%; max-width: 360px; padding: 22px 20px 18px;
+  border-radius: 20px; background: linear-gradient(160deg, #181b33, #0d1230);
+  border: 1px solid rgba(255,138,0,.4); box-shadow: 0 10px 40px rgba(0,0,0,.5);
+  max-height: 82vh; overflow-y: auto;
+}
+.buy-modal-close {
+  position: absolute; top: 12px; right: 14px; border: none; background: none;
+  color: rgba(255,255,255,.6); font-size: 22px; cursor: pointer; line-height: 1;
+}
+.buy-modal-head { font-size: 18px; font-weight: 900; color: #ffd700; }
+.buy-modal-sub { font-size: 13px; color: rgba(255,255,255,.6); margin: 6px 0 14px; }
+.buy-platform {
+  display: flex; align-items: center; gap: 12px; padding: 13px 14px; margin-bottom: 10px;
+  border-radius: 14px; text-decoration: none; color: #fff; font-weight: 700; font-size: 15px;
+  border: 1px solid rgba(255,255,255,.12); transition: all .15s;
+}
+.buy-platform:hover { transform: translateY(-1px); }
+.buy-platform.mt { background: rgba(255,193,7,.14); border-color: rgba(255,193,7,.5); }
+.buy-platform.elm { background: rgba(0,145,255,.14); border-color: rgba(0,145,255,.5); }
+.buy-platform.jd { background: rgba(255,45,85,.14); border-color: rgba(255,45,85,.5); }
+.buy-p-emoji { font-size: 22px; }
+.buy-p-name { flex: 1; }
+.buy-p-arrow { font-size: 22px; color: rgba(255,255,255,.5); }
+.buy-modal-tip { margin-top: 6px; font-size: 12px; color: rgba(255,255,255,.45); text-align: center; }
+
+@media (max-width: 360px) {
+  .buy-fab { right: 14px; bottom: calc(16px + env(safe-area-inset-bottom)); width: 52px; height: 52px; font-size: 23px; }
+}

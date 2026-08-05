@@ -92,7 +92,10 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     synthA: $('synthA'),
     synthB: $('synthB'),
     synthPool: $('synthPool'),
-    synthGo: $('synthGo')
+    synthGo: $('synthGo'),
+    buyFab: $('buyFab'),
+    buyModal: $('buyModal'),
+    buyModalClose: $('buyModalClose')
   };
 
   /* ===== 工具 ===== */
@@ -139,6 +142,23 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     els.soundBtn.classList.toggle('muted', !on);
   }
   els.soundBtn.addEventListener('click', function () { setSound(!soundOn); });
+
+  /* ===== 买菜悬浮按钮 ===== */
+  function openBuyModal() {
+    els.buyModal.classList.remove('hidden');
+    soundPop();
+  }
+  function closeBuyModal() {
+    els.buyModal.classList.add('hidden');
+  }
+  els.buyFab.addEventListener('click', openBuyModal);
+  els.buyModalClose.addEventListener('click', closeBuyModal);
+  els.buyModal.addEventListener('click', function (e) {
+    if (e.target === els.buyModal || e.target.classList.contains('buy-modal-backdrop')) closeBuyModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && !els.buyModal.classList.contains('hidden')) closeBuyModal();
+  });
 
   /* ===== 每日挑战（云 / 演示兜底） ===== */
   var DEMO_DAILY = { name: '老干妈奇袭', emoji: '🌶️', ingredients: ['老干妈', '巧克力', '剩米饭'] };
