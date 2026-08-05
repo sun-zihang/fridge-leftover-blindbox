@@ -107,7 +107,21 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     loginModal: $('loginModal'),
     loginName: $('loginName'),
     loginErr: $('loginErr'),
-    loginOk: $('loginOk')
+    loginOk: $('loginOk'),
+    fridgeToggle: $('fridgeToggle'),
+    fridgeBody: $('fridgeBody'),
+    fridgeName: $('fridgeName'),
+    fridgeDays: $('fridgeDays'),
+    fridgeAdd: $('fridgeAdd'),
+    fridgeList: $('fridgeList'),
+    fridgeCook: $('fridgeCook'),
+    nutritionBox: $('nutritionBox'),
+    nutritionBody: $('nutritionBody'),
+    shopCopy: $('shopCopy'),
+    shopExport: $('shopExport'),
+    favBtn: $('favBtn'),
+    favTabs: $('favTabs'),
+    favList: $('favList')
   };
 
   /* ===== 工具 ===== */
@@ -622,7 +636,7 @@ recognition.interimResults = true;
   function generate() {
     var text = els.ingredients.value.trim();
     if (!text) { toast('先告诉我冰箱里有什么'); return; }
-﻿    // 彩蛋：鸡蛋+番茄连续 3 次 → 主厨拒绝（本地规则，不调 AI）
+    // 彩蛋：鸡蛋+番茄连续 3 次 → 主厨拒绝（本地规则，不调 AI）
     if (/(鸡蛋|蛋)/.test(text) && /(番茄|西红柿)/.test(text)) {
       var etCount = parseInt(localStorage.getItem('fridge_egg_tomato') || '0', 10) + 1;
       localStorage.setItem('fridge_egg_tomato', String(etCount));
@@ -732,7 +746,7 @@ recognition.interimResults = true;
     els.genBtn.textContent = '召唤主厨 👨‍🍳';
     els.potLoading.classList.add('hidden');
 
-﻿    // 随机事件横幅 + 音效
+    // 随机事件横幅 + 音效
     var ev = recipe.event || null;
     if (ev) {
       els.eventBanner.classList.remove('hidden');
@@ -763,15 +777,17 @@ recognition.interimResults = true;
     els.warning.classList.add('hidden');
     els.stepsToggle.classList.remove('open');
     els.warningToggle.classList.remove('open');
+    renderNutrition(ingredients, recipe);
+    state.lastIngredients = ingredients;
+    updateFavBtn();
     renderDarkScore(recipe);
     renderDanger(recipe);
     renderShopping(recipe);
     renderChef(recipe);
     els.dishIngredients.textContent = '食材：' + ingredients;
-    var hasDetail = recipe.lib || (Array.isArray(recipe.ings) && recipe.ings.length);
     els.libBadge.classList.toggle('hidden', !recipe.lib);
-    els.detailBtn.classList.toggle('hidden', !hasDetail);
-    if (hasDetail) state.detailRecipe = recipe;
+    state.detailRecipe = recipe;
+    els.detailBtn.classList.toggle('hidden', false);
     renderSteps(recipe);
     els.plating.textContent = '“' + recipe.plating + '”';
     els.warning.textContent = recipe.warning;
@@ -843,6 +859,7 @@ recognition.interimResults = true;
     }
   }
   function renderShopping(recipe) {
+    state.shoppingList = recipe.shoppingList || [];
     els.shoppingList.textContent = '';
     var list = recipe.shoppingList || [];
     if (list.length) {
@@ -1665,6 +1682,12 @@ recognition.interimResults = true;
     dm.textContent = [recipe.scene, recipe.time ? '⏱️ 约 ' + recipe.time + ' 分钟' : '', recipe.desc].filter(Boolean).join(' · ');
     head.appendChild(dn);
     head.appendChild(dm);
+    var info = document.createElement('div');
+    info.className = 'detail-info';
+    var mins = recipe.time ? parseInt(recipe.time, 10) : ((recipe.steps || []).length * 6 + 10);
+    var diff = (recipe.steps || []).length <= 3 ? '简单' : ((recipe.steps || []).length <= 5 ? '中等' : '有挑战');
+    info.textContent = '⏱️ 约 ' + mins + ' 分钟 · 🍳 难度：' + diff + ' · 👥 2 人份';
+    head.appendChild(info);
     els.detailBody.appendChild(head);
 
     if (Array.isArray(recipe.ings) && recipe.ings.length) {
@@ -1705,14 +1728,50 @@ recognition.interimResults = true;
       ol.className = 'detail-steps';
       recipe.steps.forEach(function (s) {
         var li = document.createElement('li');
-        li.textContent = s;
+        var fh = fireHint(s);
+        li.textContent = (fh ? fh + ' ' : '') + s;
         ol.appendChild(li);
       });
       sec3.appendChild(ol);
       els.detailBody.appendChild(sec3);
     }
 
-    if (recipe.tips) {
+    if (recipe.plating) {
+      var secP = document.createElement('div');
+      secP.className = 'detail-sec';
+      secP.appendChild(secTitle('🍽️ 摆盘建议'));
+      var pp = document.createElement('p');
+      pp.className = 'detail-tips';
+      pp.textContent = recipe.plating;
+      secP.appendChild(pp);
+      els.detailBody.appendChild(secP);
+    }
+
+    if (recipe.warning) {
+      var secW = document.createElement('div');
+      secW.className = 'detail-sec';
+      secW.appendChild(secTitle('⚠️ 主厨警告'));
+      var pw = document.createElement('p');
+      pw.className = 'detail-tips';
+      pw.textContent = recipe.warning;
+      secW.appendChild(pw);
+      els.detailBody.appendChild(secW);
+    }
+
+    if (Array.isArray(recipe.shoppingList) && recipe.shoppingList.length) {
+      var secS = document.createElement('div');
+      secS.className = 'detail-sec';
+      secS.appendChild(secTitle('🛒 采购清单'));
+      var ulS = document.createElement('ul');
+      ulS.className = 'detail-ings';
+      recipe.shoppingList.forEach(function (s) {
+        var li = document.createElement('li');
+        li.textContent = s;
+        ulS.appendChild(li);
+      });
+      secS.appendChild(ulS);
+      els.detailBody.appendChild(secS);
+    }    if (recipe.tips) {
       var sec4 = document.createElement('div');
       sec4.className = 'detail-sec';
       sec4.appendChild(secTitle('💡 主厨小贴士'));
@@ -1772,7 +1831,7 @@ recognition.interimResults = true;
     }
   });
 
-﻿  /* ===== 新增：彩蛋 / 随机事件 / 弹幕 / 双人对局（网页版） ===== */
+  /* ===== 新增：彩蛋 / 随机事件 / 弹幕 / 双人对局（网页版） ===== */
 
   /* ---- 输入框占位符轮换（贱萌文案） ---- */
   var PLACEHOLDERS = [
@@ -1943,7 +2002,7 @@ recognition.interimResults = true;
     document.body.removeChild(ta);
   }
 
-﻿  /* ---- 双人盲盒对局 ---- */
+  /* ---- 双人盲盒对局 ---- */
   var duel = {
     roomId: '', code: '', nick: '', myUid: '', isHost: false, joinRoomId: '',
     players: {}, exchange: {}, phase: '', winner: '', tie: false,
@@ -2527,4 +2586,196 @@ recognition.interimResults = true;
     if (e.target === els.loginModal || e.target.classList.contains('login-backdrop')) closeLoginModal();
   });
   renderAccountBtn();
+
+  /* ===== 实用向：我的冰箱 / 营养估算 / 清单工具 / 收藏 ===== */
+
+  /* ---- 我的冰箱（食材管理，localStorage） ---- */
+  var FRIDGE_KEY = 'fridge_inventory';
+  var fridgeItems = [];
+  function loadFridge() {
+    try { fridgeItems = JSON.parse(localStorage.getItem(FRIDGE_KEY) || '[]'); } catch (e) { fridgeItems = []; }
+    if (!Array.isArray(fridgeItems)) fridgeItems = [];
+  }
+  function saveFridge() { localStorage.setItem(FRIDGE_KEY, JSON.stringify(fridgeItems)); }
+  function daysLeft(it) { return Math.ceil(((it.addedAt || Date.now()) + (it.days || 5) * 86400000 - Date.now()) / 86400000); }
+  function renderFridge() {
+    els.fridgeList.textContent = '';
+    if (!fridgeItems.length) {
+      els.fridgeList.appendChild(el('p', 'fridge-empty', '冰箱空空的，把食材记下来吧～'));
+    }
+    fridgeItems.forEach(function (it, idx) {
+      var d = daysLeft(it);
+      var chip = document.createElement('span');
+      chip.className = 'fridge-item' + (d <= 0 ? ' expired' : (d <= 2 ? ' expiring' : ''));
+      var nm = document.createElement('span'); nm.textContent = it.name;
+      chip.appendChild(nm);
+      var days = document.createElement('span'); days.className = 'fi-days';
+      days.textContent = d <= 0 ? '已过期' : (d <= 2 ? '剩' + d + '天' : (it.days || 5) + '天');
+      chip.appendChild(days);
+      var del = document.createElement('button'); del.className = 'fi-del'; del.textContent = '×';
+      del.addEventListener('click', function () { fridgeItems.splice(idx, 1); saveFridge(); renderFridge(); });
+      chip.appendChild(del);
+      els.fridgeList.appendChild(chip);
+    });
+  }
+  function addFridgeItem() {
+    var n = els.fridgeName.value.trim();
+    if (!n) { toast('先输入食材名'); return; }
+    var days = parseInt(els.fridgeDays.value, 10) || 5;
+    fridgeItems.push({ name: n, days: days, addedAt: Date.now() });
+    saveFridge(); renderFridge();
+    els.fridgeName.value = '';
+    soundPop();
+    toast('已记下 ' + n);
+  }
+  function fridgeToIngredients() {
+    var alive = fridgeItems.filter(function (it) { return daysLeft(it) > 0; });
+    if (!alive.length) { toast('冰箱里没有能吃的了，先加点食材'); return; }
+    alive.sort(function (a, b) { return daysLeft(a) - daysLeft(b); });
+    var text = alive.map(function (it) { return it.name; }).slice(0, 6).join('、');
+    els.ingredients.value = text;
+    els.charCount.textContent = text.length + '/200';
+    var urgent = alive.filter(function (it) { return daysLeft(it) <= 2; });
+    if (urgent.length) toast('优先吃掉快过期的：' + urgent.map(function (it) { return it.name; }).join('、'));
+    else toast('已填入冰箱食材，开整吧！');
+  }
+  els.fridgeToggle.addEventListener('click', function () {
+    var open = els.fridgeBody.classList.toggle('hidden');
+    els.fridgeToggle.classList.toggle('open', !open);
+  });
+  els.fridgeAdd.addEventListener('click', addFridgeItem);
+  els.fridgeName.addEventListener('keydown', function (e) { if (e.key === 'Enter') addFridgeItem(); });
+  els.fridgeCook.addEventListener('click', fridgeToIngredients);
+
+  /* ---- 营养估算（启发式，图个心里有数） ---- */
+  function estimateNutrition(ingsText, recipe) {
+    var t = String(ingsText || '') + ' ' + ((recipe && recipe.name) || '');
+    var count = String(ingsText || '').split(/[、,，;；+＋]/).filter(Boolean).length || 2;
+    var kcal = 300 + count * 35;
+    var protein = 10 + count * 3;
+    var carbs = 28 + count * 4;
+    if (/饭|面|粉|土豆|馒头|饼|米|面包/.test(t)) kcal += 90;
+    if (/肉|鸡|牛|猪|鱼|虾|蛋|豆腐|奶/.test(t)) { protein += 14; kcal += 70; }
+    if (/油|炸|煎|肥|芝士|奶油/.test(t)) kcal += 110;
+    if (/可乐|糖|甜|巧克力|冰淇淋|汽水/.test(t)) kcal += 90;
+    if (/菜|瓜|叶|菇|笋/.test(t)) { carbs += 6; protein += 2; }
+    return {
+      kcal: Math.round(kcal * 0.92) + '-' + Math.round(kcal * 1.08),
+      protein: protein + '-' + (protein + 7) + 'g',
+      carbs: carbs + '-' + (carbs + 12) + 'g'
+    };
+  }
+  function renderNutrition(ings, recipe) {
+    var n = estimateNutrition(ings, recipe);
+    els.nutritionBox.classList.remove('hidden');
+    els.nutritionBody.textContent = '';
+    [
+      { v: n.kcal, l: '千卡' },
+      { v: n.protein, l: '蛋白质' },
+      { v: n.carbs, l: '碳水' }
+    ].forEach(function (it) {
+      var d = document.createElement('div'); d.className = 'nutrition-item';
+      var b = document.createElement('b'); b.textContent = it.v;
+      var s = document.createElement('span'); s.textContent = it.l;
+      d.appendChild(b); d.appendChild(s);
+      els.nutritionBody.appendChild(d);
+    });
+  }
+
+  /* ---- 购物清单：复制 / 导出 ---- */
+  function currentShoppingText() {
+    var list = state.shoppingList || [];
+    var head = '【' + ((state.recipe && state.recipe.name) || '菜谱') + '】采购清单\n';
+    if (!list.length) return head + '（无需额外采购）';
+    return head + list.map(function (s, i) { return (i + 1) + '. ' + s; }).join('\n');
+  }
+  els.shopCopy.addEventListener('click', function () {
+    copyText(currentShoppingText());
+    toast('清单已复制，去外卖 App 下单吧');
+  });
+  els.shopExport.addEventListener('click', function () {
+    var txt = currentShoppingText();
+    var blob = new Blob([txt], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = ((state.recipe && state.recipe.name) || '菜谱') + '-采购清单.txt';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 3000);
+    toast('清单已导出');
+  });
+
+  /* ---- 收藏（localStorage，按分类） ---- */
+  var FAV_KEY = 'fridge_favorites';
+  var favItems = [];
+  var favCat = '全部';
+  function loadFavs() { try { favItems = JSON.parse(localStorage.getItem(FAV_KEY) || '[]'); } catch (e) { favItems = []; } if (!Array.isArray(favItems)) favItems = []; }
+  function saveFavs() { localStorage.setItem(FAV_KEY, JSON.stringify(favItems)); }
+  function favCatOf(recipe) {
+    if (state.mode === 'weird') return '黑暗收藏';
+    var n = (recipe.steps || []).length;
+    return n >= 5 ? '周末大菜' : '快手菜';
+  }
+  function isFaved(recipe) { return favItems.some(function (f) { return f.name === recipe.name; }); }
+  function toggleFav() {
+    var r = state.recipe; if (!r) return;
+    var idx = -1;
+    for (var i = 0; i < favItems.length; i++) { if (favItems[i].name === r.name) { idx = i; break; } }
+    if (idx >= 0) { favItems.splice(idx, 1); toast('已取消收藏'); }
+    else {
+      favItems.unshift({ name: r.name, ingredients: state.lastIngredients || '', recipe: r, cat: favCatOf(r), date: new Date().toLocaleDateString() });
+      toast('已收藏到「' + favCatOf(r) + '」');
+    }
+    saveFavs(); updateFavBtn(); renderFavs();
+  }
+  function updateFavBtn() {
+    var r = state.recipe;
+    var faved = r && isFaved(r);
+    els.favBtn.classList.toggle('hidden', !r);
+    els.favBtn.classList.toggle('faved', !!faved);
+    els.favBtn.textContent = faved ? '⭐ 已收藏' : '⭐ 收藏菜谱';
+  }
+  function renderFavTabs() {
+    var cats = ['全部', '快手菜', '周末大菜', '黑暗收藏'];
+    els.favTabs.textContent = '';
+    cats.forEach(function (c) {
+      var b = document.createElement('button'); b.type = 'button';
+      b.className = 'fav-tab' + (c === favCat ? ' active' : '');
+      b.textContent = c;
+      b.addEventListener('click', function () { favCat = c; renderFavTabs(); renderFavs(); });
+      els.favTabs.appendChild(b);
+    });
+  }
+  function renderFavs() {
+    els.favList.textContent = '';
+    var list = favCat === '全部' ? favItems : favItems.filter(function (f) { return f.cat === favCat; });
+    if (!list.length) {
+      els.favList.appendChild(el('p', 'fav-empty', favCat === '全部' ? '还没有收藏，生成菜谱后点「⭐ 收藏菜谱」' : '这个分类还没有收藏'));
+      return;
+    }
+    list.forEach(function (f, i) {
+      var card = document.createElement('div'); card.className = 'fav-item';
+      var em = el('span', 'fi-emoji', f.cat === '周末大菜' ? '🍲' : (f.cat === '快手菜' ? '⚡' : '💀'));
+      var main = el('div', 'fi-main');
+      main.appendChild(el('div', 'fi-name', f.name));
+      main.appendChild(el('div', 'fi-meta', f.cat + ' · ' + f.date));
+      var del = document.createElement('button'); del.className = 'fi-del'; del.textContent = '×';
+      del.addEventListener('click', function (ev) { ev.stopPropagation(); favItems.splice(i, 1); saveFavs(); renderFavs(); });
+      card.appendChild(em); card.appendChild(main); card.appendChild(del);
+      card.addEventListener('click', function () { renderDetail(f.recipe); els.detailModal.classList.remove('hidden'); });
+      els.favList.appendChild(card);
+    });
+  }
+  els.favBtn.addEventListener('click', toggleFav);
+
+  /* ---- 做菜指导增强：火候/用时提示 ---- */
+  function fireHint(s) {
+    if (!s) return '';
+    var map = { '大火': '🔥', '中火': '🔥', '小火': '♨️', '煎': '🍳', '炸': '🍤', '焯': '💧', '焖': '🍲', '炖': '🍲', '烤': '🔥', '蒸': '♨️', '煮': '♨️' };
+    for (var k in map) { if (s.indexOf(k) >= 0) return map[k]; }
+    return '';
+  }
+
+  /* ---- 初始化：渲染冰箱 + 收藏 ---- */
+  loadFridge(); renderFridge();
+  loadFavs(); renderFavTabs(); renderFavs();
 })();

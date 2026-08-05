@@ -58,7 +58,31 @@
       </div>
     </div>
 
-    <section class="input-card">
+    <section class="fridge-card">
+      <div class="fridge-head">
+        <span class="fridge-emoji">🧊</span>
+        <div class="fridge-text">
+          <b>我的冰箱</b>
+          <p>记下食材，快过期会标红提醒</p>
+        </div>
+        <button id="fridgeToggle" class="fridge-toggle" type="button">▾</button>
+      </div>
+      <div id="fridgeBody" class="fridge-body hidden">
+        <div class="fridge-add">
+          <input id="fridgeName" class="fridge-input" maxlength="20" placeholder="食材名，如：番茄">
+          <select id="fridgeDays" class="fridge-days">
+            <option value="3">3 天内吃</option>
+            <option value="5" selected>5 天内吃</option>
+            <option value="7">7 天内吃</option>
+          </select>
+          <button id="fridgeAdd" class="fridge-add-btn" type="button">＋</button>
+        </div>
+        <div id="fridgeList" class="fridge-list"></div>
+        <div class="fridge-actions">
+          <button id="fridgeCook" class="fridge-cook-btn" type="button">🧊 用冰箱剩菜开盲盒</button>
+        </div>
+      </div>
+    </section>    <section class="input-card">
       <textarea id="ingredients" maxlength="200" rows="3" placeholder="例如：半个洋葱、两包泡面、一瓶可乐"></textarea>
       <div class="input-footer">
         <button id="micBtn" class="mic-btn hidden" type="button">🎙️ 语音输入</button>
@@ -172,10 +196,18 @@
       </div>
 
       <div id="dangerBox" class="danger-box hidden"></div>
+      <div id="nutritionBox" class="nutrition-box hidden">
+        <div class="nutrition-head">🥗 营养估算 <span class="shopping-sub">大概心里有数</span></div>
+        <div id="nutritionBody" class="nutrition-body"></div>
+      </div>
 
       <div id="shoppingBox" class="shopping-box hidden">
         <div class="shopping-head">🛒 主厨采购清单 <span class="shopping-sub">勾选要去买的</span></div>
         <div id="shoppingList" class="shopping-list"></div>
+        <div class="shopping-tools">
+          <button id="shopCopy" class="shop-tool-btn" type="button">📋 复制清单</button>
+          <button id="shopExport" class="shop-tool-btn" type="button">📤 导出 .txt</button>
+        </div>
         <div class="delivery-row">
           <span class="delivery-label">🧺 去外卖买菜：</span>
           <a class="delivery-link mt" href="https://waimai.meituan.com/" target="_blank" rel="noopener">🟡 美团外卖</a>
@@ -199,6 +231,7 @@
       <p id="warning" class="warning hidden"></p>
 
       <button id="detailBtn" class="detail-btn hidden" type="button">📖 查看完整菜单</button>
+      <button id="favBtn" class="fav-btn hidden" type="button">⭐ 收藏菜谱</button>
 
       <div class="rate-row">
         <span class="rate-title">这菜你觉得？</span>
@@ -220,7 +253,12 @@
       <p class="tip">把海报发给朋友，让 TA 猜猜你做了什么黑暗料理</p>
     </section>
 
-    <section class="rank-section">
+    <section class="fav-section">
+      <h2 class="fav-title">📁 我的收藏</h2>
+      <p class="fav-sub">好菜存下来，下次直接看</p>
+      <div id="favTabs" class="fav-tabs"></div>
+      <div id="favList" class="fav-list"></div>
+    </section>    <section class="rank-section">
       <h2 class="rank-title">🏛️ 剩菜博物馆</h2>
       <p class="rank-sub">全网最离谱菜谱大赏 · 按症状分类</p>
       <div id="rankTabs" class="rank-tabs"></div>
