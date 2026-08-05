@@ -120,12 +120,16 @@ test('heuristicDarkScore: 猎奇高、家常低、范围 0-100', () => {
   assert.ok(heuristicDarkScore('', null, 'normal') >= 0 && heuristicDarkScore('', null, 'weird') <= 100);
 });
 
-test('darkTier: 四档分级（越高越黑暗）', () => {
-  assert.strictEqual(darkTier(10).key, 'safe');
-  assert.strictEqual(darkTier(50).key, 'ok');
-  assert.strictEqual(darkTier(70).key, 'risky');
-  assert.strictEqual(darkTier(95).key, 'bio');
-  assert.strictEqual(darkTier(90).label, '生化武器');
+test('darkTier: 新分级（家常凑合/猎奇整活/生化武器/传说级）', () => {
+  assert.strictEqual(darkTier(10).key, 'ok');
+  assert.strictEqual(darkTier(10).label, '家常凑合');
+  assert.strictEqual(darkTier(50).key, 'risky');
+  assert.strictEqual(darkTier(50).label, '猎奇整活');
+  assert.strictEqual(darkTier(71).key, 'bio');
+  assert.strictEqual(darkTier(95).label, '生化武器');
+  assert.strictEqual(darkTier(100).key, 'legend');
+  assert.strictEqual(darkTier(100).label, '传说级料理');
+  assert.strictEqual(darkTier(100).legendary, true);
 });
 
 test('findDangerWarnings: 命中危险规则', () => {

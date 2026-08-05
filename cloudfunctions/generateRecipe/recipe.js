@@ -182,13 +182,13 @@ function heuristicDarkScore(ingredients, recipe, mode) {
   return Math.max(0, Math.min(100, score));
 }
 
-// 黑暗指数分级：越高越黑暗（前端也按此渲染，颜色/文案三端共用）
+// 黑暗指数分级：越高越黑暗（0-30 家常凑合 / 31-70 猎奇整活 / 71-99 生化武器 / 100 传说级料理·极低概率彩蛋）
 function darkTier(score) {
   const s = typeof score === 'number' ? score : 50;
-  if (s <= 20) return { key: 'safe',  label: '家常安全',  emoji: '🍚', tip: '放心吃，主厨都夸你懂生活',         color: '#4ade80' };
-  if (s < 60)  return { key: 'ok',    label: '家常凑合',  emoji: '🍽️', tip: '饿极了可以吃，味道看缘分',         color: '#ffd700' };
-  if (s <= 80) return { key: 'risky', label: '黑暗料理',  emoji: '💀', tip: '能吃，但请做好心理建设',           color: '#ff7f27' };
-  return { key: 'bio',   label: '生化武器',  emoji: '☣️', tip: '建议直接扔掉，别挑战生命极限', color: '#ff2d55' };
+  if (s >= 100) return { key: 'legend', label: '传说级料理', emoji: '🙇', tip: '这是神的旨意！请收下我的膝盖！', color: '#ffd700', legendary: true };
+  if (s <= 30)  return { key: 'ok',    label: '家常凑合',  emoji: '🍚', tip: '饿不死，但也没灵魂',             color: '#8ea2c8' };
+  if (s <= 70)  return { key: 'risky', label: '猎奇整活',  emoji: '🎢', tip: '有点意思，肠胃准备接受挑战吧',   color: '#ff7f27' };
+  return { key: 'bio',   label: '生化武器',  emoji: '☣️', tip: '建议购买巨额保险后再尝试，你已触发「厨房毁灭者」成就！', color: '#ff2d55' };
 }
 
 // 危险食材红色高亮规则：命中即前端红色警告条

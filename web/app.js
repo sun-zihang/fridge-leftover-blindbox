@@ -8,7 +8,7 @@
   var isDemo = !CLOUD_ENV_ID || CLOUD_ENV_ID === 'YOUR_ENV_ID';
 
   var cloudApp = null;
-var state = { recipe: null, recordId: '', rated: false, generating: false, styleId: 'classic', mode: 'weird', player: null, styles: [], rankData: [], rankTag: '全部', posterSkin: 'normal', challengeId: '', detailRecipe: null, rankDetailRecipe: null };
+var state = { recipe: null, recordId: '', rated: false, generating: false, styleId: 'classic', mode: 'weird', persona: 'youmo', player: null, styles: [], rankData: [], rankTag: '全部', posterSkin: 'normal', challengeId: '', detailRecipe: null, rankDetailRecipe: null, synthA: '', synthB: '' };
 
   function $(id) { return document.getElementById(id); }
   var els = {
@@ -86,7 +86,13 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     rankVoteDown: $('rankVoteDown'),
     rankVoteUpNum: $('rankVoteUpNum'),
     rankVoteDownNum: $('rankVoteDownNum'),
-    soundBtn: $('soundBtn')
+    soundBtn: $('soundBtn'),
+    personaBtns: document.querySelectorAll('.persona-btn'),
+    synthCard: $('synthCard'),
+    synthA: $('synthA'),
+    synthB: $('synthB'),
+    synthPool: $('synthPool'),
+    synthGo: $('synthGo')
   };
 
   /* ===== 工具 ===== */
@@ -395,6 +401,52 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     });
   });
 
+  /* ===== 主厨人设 ===== */
+  els.personaBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      state.persona = btn.getAttribute('data-persona');
+      els.personaBtns.forEach(function (b) { b.classList.toggle('active', b === btn); });
+    });
+  });
+
+  /* ===== 食材合成实验室 ===== */
+  var SYNTH_POOL = ['米饭', '牛奶', '可乐', '雪碧', '老干妈', '鸡蛋', '泡面', '香蕉', '巧克力', '皮蛋', '酸奶', '土豆', '西瓜', '辣条'];
+  function renderSynthPool() {
+    els.synthPool.textContent = '';
+    SYNTH_POOL.forEach(function (ing) {
+      var chip = document.createElement('span');
+      chip.className = 'synth-ing' + ((state.synthA === ing || state.synthB === ing) ? ' picked' : '');
+      chip.textContent = ing;
+      chip.addEventListener('click', function () { pickSynth(ing); });
+      els.synthPool.appendChild(chip);
+    });
+  }
+  function pickSynth(ing) {
+    // 循环填 A → B → 取消
+    if (state.synthA === ing) { state.synthA = ''; }
+    else if (state.synthB === ing) { state.synthB = ''; }
+    else if (!state.synthA) { state.synthA = ing; }
+    else if (!state.synthB) { state.synthB = ing; }
+    else { state.synthA = state.synthB; state.synthB = ing; }
+    els.synthA.textContent = state.synthA || '食材A';
+    els.synthB.textContent = state.synthB || '食材B';
+    els.synthA.classList.toggle('picked', !!state.synthA);
+    els.synthB.classList.toggle('picked', !!state.synthB);
+    renderSynthPool();
+  }
+  els.synthA.addEventListener('click', function () { if (state.synthA) { state.synthA = ''; els.synthA.textContent = '食材A'; els.synthA.classList.remove('picked'); renderSynthPool(); } });
+  els.synthB.addEventListener('click', function () { if (state.synthB) { state.synthB = ''; els.synthB.textContent = '食材B'; els.synthB.classList.remove('picked'); renderSynthPool(); } });
+  els.synthGo.addEventListener('click', function () {
+    if (!state.synthA || !state.synthB) { toast('先选两种食材'); return; }
+    var text = state.synthA + ' + ' + state.synthB;
+    els.ingredients.value = text;
+    els.charCount.textContent = text.length + '/200';
+    state.mode = 'synth';
+    els.modeBtns.forEach(function (b) { b.classList.toggle('active', b.getAttribute('data-mode') === 'synth'); });
+    toast('开始炼金合成：' + text);
+    generate();
+  });
+
   /* ===== 输入 ===== */
   els.ingredients.addEventListener('input', function () {
     els.charCount.textContent = els.ingredients.value.length + '/200';
@@ -416,7 +468,7 @@ recognition.interimResults = true;
         else { interimText += e.results[i][0].transcript; }
       }
       if (interimText) {
-        els.micHint.textContent = '正在听你说：' + interimText;
+        els.micHint.textContent = '正在听你说：' + interimText + voiceEmoji(interimText);
         els.micHint.classList.remove('hidden');
       } else if (finalText) {
         els.micHint.classList.add('hidden');
@@ -430,6 +482,27 @@ recognition.interimResults = true;
       try { recognition.start(); setMic(true); }
       catch (e) { toast('无法启动语音识别'); }
     });
+  }
+  var VOICE_EMOJI = [
+    { re: /洋葱/, e: ' 😭' },
+    { re: /可乐|雪碧|汽水/, e: ' 🥤' },
+    { re: /泡面|方便面/, e: ' 🍜' },
+    { re: /辣椒|老干妈|辣/, e: ' 🌶️' },
+    { re: /鸡蛋/, e: ' 🥚' },
+    { re: /土豆/, e: ' 🥔' },
+    { re: /米饭|米/, e: ' 🍚' },
+    { re: /牛奶|酸奶/, e: ' 🥛' },
+    { re: /巧克力/, e: ' 🍫' },
+    { re: /香蕉/, e: ' 🍌' },
+    { re: /西瓜/, e: ' 🍉' },
+    { re: /皮蛋/, e: ' 🥚' },
+    { re: /肉/, e: ' 🥩' },
+    { re: /鱼/, e: ' 🐟' },
+    { re: /酒|啤酒/, e: ' 🍺' }
+  ];
+  function voiceEmoji(text) {
+    var hit = VOICE_EMOJI.find(function (v) { return v.re.test(text); });
+    return hit ? hit.e : '';
   }
   function setMic(on) {
     recognition.recognizing = on;
@@ -528,7 +601,7 @@ recognition.interimResults = true;
       return;
     }
 
-    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'generate', ingredients: text, style: state.styleId, mode: state.mode } })
+    cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'generate', ingredients: text, style: state.styleId, mode: state.mode, persona: state.persona } })
       .then(function (res) {
         var r = res && res.result ? res.result : {};
         if (!r.success) throw new Error(r.error || '生成失败');
@@ -628,6 +701,7 @@ recognition.interimResults = true;
     soundDing();
     var hasDanger = (recipe.dangerFlags && recipe.dangerFlags.length) || (recipe.darkScore && recipe.darkScore > 80);
     if (hasDanger) soundAlarm();
+    if (recipe.darkScore >= 100) toast('🙇 传说级料理！这是神的旨意！');
     els.result.scrollIntoView({ behavior: 'smooth' });
   }
 
@@ -657,6 +731,7 @@ recognition.interimResults = true;
   }
   function renderDarkScore(recipe) {
     var score = (typeof recipe.darkScore === 'number') ? recipe.darkScore : heuristicWeb(els.ingredients.value.trim(), state.mode);
+    if (typeof recipe.darkScore !== 'number' && Math.random() < 0.04) score = 100;
     var tier = recipe.darkTier || darkTierOf(score);
     els.darkScoreBox.classList.remove('hidden');
     els.darkScoreEmoji.textContent = tier.emoji;
@@ -668,10 +743,10 @@ recognition.interimResults = true;
     setTimeout(function () { els.darkScoreFill.style.width = score + '%'; }, 30);
   }
   function darkTierOf(score) {
-    if (score <= 20) return { key: 'safe', label: '家常安全', emoji: '🍚', tip: '放心吃，主厨都夸你懂生活', color: '#4ade80' };
-    if (score < 60) return { key: 'ok', label: '家常凑合', emoji: '🍽️', tip: '饿极了可以吃，味道看缘分', color: '#ffd700' };
-    if (score <= 80) return { key: 'risky', label: '黑暗料理', emoji: '💀', tip: '能吃，但请做好心理建设', color: '#ff7f27' };
-    return { key: 'bio', label: '生化武器', emoji: '☣️', tip: '建议直接扔掉，别挑战生命极限', color: '#ff2d55' };
+    if (score >= 100) return { key: 'legend', label: '传说级料理', emoji: '🙇', tip: '这是神的旨意！请收下我的膝盖！', color: '#ffd700' };
+    if (score <= 30) return { key: 'ok', label: '家常凑合', emoji: '🍚', tip: '饿不死，但也没灵魂', color: '#8ea2c8' };
+    if (score <= 70) return { key: 'risky', label: '猎奇整活', emoji: '🎢', tip: '有点意思，肠胃准备接受挑战吧', color: '#ff7f27' };
+    return { key: 'bio', label: '生化武器', emoji: '☣️', tip: '建议购买巨额保险后再尝试，你已触发「厨房毁灭者」成就！', color: '#ff2d55' };
   }
   function renderDanger(recipe) {
     els.dangerBox.textContent = '';
@@ -711,10 +786,13 @@ recognition.interimResults = true;
   function renderChef(recipe) {
     var score = (typeof recipe.darkScore === 'number') ? recipe.darkScore : 50;
     els.chefResult.classList.remove('sweat', 'cool');
-    if (score > 80) {
+    if (score >= 100) {
+      els.chefResult.textContent = '🙇';
+      els.chefResult.classList.add('cool');
+    } else if (score > 70) {
       els.chefResult.textContent = '🥴';
       els.chefResult.classList.add('sweat');
-    } else if (score <= 20) {
+    } else if (score <= 30) {
       els.chefResult.textContent = '😎';
       els.chefResult.classList.add('cool');
     } else {
@@ -1504,6 +1582,7 @@ recognition.interimResults = true;
   initCloud().then(function (ready) {
     loadRank(ready);
     loadDaily();
+    renderSynthPool();
     if (!isDemo && cloudApp) {
       loadPlayer();
       handleChallengeParam();

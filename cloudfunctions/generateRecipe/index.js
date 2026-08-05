@@ -56,6 +56,26 @@ const SYSTEM_PROMPT =
   '"darkScore": 0到100之间的整数（0=最安全，100=绝对生化武器，根据食材奇葩程度和翻车风险打分）,' +
   '"shoppingList": ["这道菜还需要额外采购的调料/食材，没有则给空数组"]}';
 
+// 主厨人设：切换语气/画风（毒舌 / 戏精 / 温柔 / 幽默默认）
+const PERSONA_PROMPTS = {
+  dusha: '你的人设是「毒舌主厨」：吐槽毫不留情、句句扎心，但菜谱本身依然能吃。给菜名时要带上嘲讽，警告要狠一点。',
+  xijing: '你的人设是「戏精主厨」：极度浮夸、把每道菜吹成米其林史诗，用词华丽到起鸡皮疙瘩。',
+  wenrou: '你的人设是「温柔主厨」：语气温暖治愈，像深夜电台一样安抚每一份剩菜和每一个熬夜的人。',
+  youmo: '' // 默认幽默深夜食堂主厨（SYSTEM_PROMPT 已含）
+};
+
+// 食材合成模式：炼金术合成大师，把两种基础食材合成一道菜
+const SYNTH_PROMPT =
+  '你是「食材炼金术士」，最擅长把两种看似毫不相干的基础食材合成出惊喜。' +
+  '用户给你两种食材，请合成出一道有名字的料理，并给出做法、摆盘与警告。' +
+  '请严格以 JSON 格式输出，不要输出多余文字：' +
+  '{"name": "合成出的菜名（不超过10个字，要有梗）",' +
+  '"steps": ["步骤1", "步骤2", "步骤3"],' +
+  '"plating": "一句摆盘建议",' +
+  '"warning": "一句温馨提示或吐槽",' +
+  '"darkScore": 0到100之间的整数（0=安全好吃，100=生化武器）,' +
+  '"shoppingList": ["额外需要的调料，没有给空数组"]}';
+
 // ---------- 工具 ----------
 
 function chinaToday() {
@@ -174,7 +194,7 @@ function stylesView(p) {
 
 // ---------- AI 生成 ----------
 
-async function generate(ingredients, style, mode) {
+async function generate(ingredients, style, mode, persona) {
   // 正常家常模式：优先从内置菜谱库（206 道家常菜）按食材匹配，命中直接返回（含详细菜单字段）
   if (mode === 'normal') {
     const hit = NR.matchNormalRecipe(ingredients);
@@ -186,7 +206,9 @@ async function generate(ingredients, style, mode) {
   let recipe = null;
   let lastError = '';
   const stylePrompt = (style && style.id !== 'classic') ? STYLE_PROMPTS[style.id] : '';
-  const basePrompt = mode === 'normal' ? NORMAL_PROMPT : SYSTEM_PROMPT;
+  const personaPrompt = PERSONA_PROMPTS[persona] !== undefined ? PERSONA_PROMPTS[persona] : PERSONA_PROMPTS.youmo;
+  const basePrompt = mode === 'normal' ? NORMAL_PROMPT
+    : (mode === 'synth' ? SYNTH_PROMPT : SYSTEM_PROMPT);
 
   for (let i = 0; i < 3; i++) {
     try {
@@ -196,6 +218,9 @@ async function generate(ingredients, style, mode) {
       ];
       if (stylePrompt) {
         messages.push({ role: 'user', content: '风格要求：' + stylePrompt });
+      }
+      if (personaPrompt) {
+        messages.push({ role: 'user', content: '人设要求：' + personaPrompt });
       }
       if (i > 0) {
         messages.push({
@@ -226,6 +251,10 @@ function decorate(recipe, ingredients, mode, fallback, fromLib, lastError) {
   var r = Object.assign({}, recipe);
   if (typeof r.darkScore !== 'number') {
     r.darkScore = heuristicDarkScore(ingredients, r, mode);
+  }
+  // 传说级料理彩蛋：极低概率（4%）把分数拉到 100，触发「神的旨意」
+  if (r.darkScore !== 100 && Math.random() < 0.04) {
+    r.darkScore = 100;
   }
   r.darkTier = darkTier(r.darkScore);
   r.dangerFlags = findDangerWarnings(ingredients, r);
@@ -517,8 +546,8 @@ exports.main = async (rawEvent) => {
       return { success: false, error: '该风格尚未解锁，先去攒积分吧' };
     }
 
-    const mode = event.mode === 'normal' ? 'normal' : 'weird';
-    const generated = await generate(ingredients, style, mode);
+    const mode = (event.mode === 'normal' || event.mode === 'synth') ? event.mode : 'weird';
+    const generated = await generate(ingredients, style, mode, event.persona);
     const tag = guessTag(generated.recipe);
 
     const addRes = await db.collection('recipes').add({
