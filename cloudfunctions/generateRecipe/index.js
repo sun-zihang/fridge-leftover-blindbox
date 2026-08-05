@@ -79,6 +79,28 @@ const SYNTH_PROMPT =
   '"darkScore": 0到100之间的整数（0=安全好吃，100=生化武器）,' +
   '"shoppingList": ["额外需要的调料，没有给空数组"]}';
 
+// 周计划管家 Prompt：AI 批量生成一周不重复菜谱
+const WEEK_PLAN_PROMPT =
+  '你是「冰箱剩菜盲盒」的周计划管家。根据用户冰箱里的食材，规划一周 7 天不重复的菜谱。' +
+  '要求：每天一道菜，菜名互不相同；食材尽量用到冰箱现有食材；每天给出简短步骤（2-5 步）、' +
+  '所需食材清单、一句菜色介绍、一句小贴士。' +
+  '只输出 JSON 数组，不要输出任何多余文字，形如：' +
+  '[{"name":"菜名","steps":["步骤1","步骤2"],"ings":["洋葱 1 个","鸡腿 2 个"],"desc":"一句介绍","tips":"一句贴士","time":"30分钟"}]。';
+
+// 备菜指南 Prompt：批量食材的预处理方案
+const MEAL_PREP_PROMPT =
+  '你是「冰箱剩菜盲盒」的备菜管家。用户批量采购了一种食材，请给出 3-5 条备菜方案（meal prep）。' +
+  '每条方案包含：method（怎么处理）、storage（冷藏/冷冻）、shelfLife（可保存多久）、recipeName（适合做哪道菜）、desc（一句说明）。' +
+  '只输出 JSON 数组，不要输出多余文字：' +
+  '[{"method":"切块腌制","storage":"冷冻","shelfLife":"7天","recipeName":"宫保鸡丁","desc":"..."}]。';
+
+// 反向搜索 Prompt：想吃 X 但缺 Y → 平替
+const REVERSE_PROMPT =
+  '你是「冰箱剩菜盲盒」的平替主厨。用户会说“想吃某道菜，但缺某种食材”，请根据用户冰箱现有食材给出平替方案。' +
+  '只输出 JSON 对象，不要输出多余文字：' +
+  '{"want":"想吃的菜","missing":"缺的食材","substitute":"用来替代的冰箱食材","resultName":"平替菜名","recipe":{"name":"菜名","steps":["步骤1","步骤2"],"ings":["食材 1 个"],"desc":"一句介绍","tips":"一句贴士"},"tip":"一句平替说明"}。' +
+  'recipe 给出一道可以直接做的平替菜谱（步骤 2-5 步）。';
+
 // ---------- 工具 ----------
 
 function chinaToday() {
@@ -289,6 +311,140 @@ function decorate(recipe, ingredients, mode, fallback, fromLib, lastError) {
   r.dangerFlags = findDangerWarnings(ingredients, r);
   if (!Array.isArray(r.shoppingList)) r.shoppingList = [];
   return { recipe: r, fallback: fallback, fromLib: fromLib, lastError: lastError || '' };
+}
+
+// ---------- 厨房生活管家：周计划 / 备菜 / 反向搜索 ----------
+
+async function aiJson(messages, attempts) {
+  const model = ai.createModel('cloudbase');
+  let lastErr = '';
+  for (let i = 0; i < (attempts || 2); i++) {
+    try {
+      const msgs = messages.slice();
+      if (i > 0) msgs.push({ role: 'user', content: '上次输出不符合要求，请只输出指定结构的 JSON。' });
+      const result = await model.generateText({ model: MODEL, messages: msgs });
+      return result.text;
+    } catch (err) {
+      lastErr = (err && err.message) || String(err);
+    }
+  }
+  throw new Error(lastErr || 'AI 调用失败');
+}
+
+// 从模型输出提取 JSON 数组（兼容围栏 / 对象包裹 plan/list）
+function extractJsonArray(text) {
+  if (!text || typeof text !== 'string') return null;
+  const fenced = text.match(/\`\`\`(?:json)?\s*([\s\S]*?)\`\`\`/);
+  const candidate = fenced ? fenced[1] : text;
+  const start = candidate.indexOf('[');
+  const end = candidate.lastIndexOf(']');
+  if (start >= 0 && end > start) {
+    try { return JSON.parse(candidate.slice(start, end + 1)); } catch (e) { /* continue */ }
+  }
+  const obj = extractJson(candidate);
+  if (obj && Array.isArray(obj.plan)) return obj.plan;
+  if (obj && Array.isArray(obj.list)) return obj.list;
+  return null;
+}
+
+// 周计划条目 / 平替菜谱的统一轻量规范化（要求 name + steps）
+function normalizePlanItem(obj) {
+  if (!obj || typeof obj !== 'object') return null;
+  const name = typeof obj.name === 'string' ? obj.name.trim().slice(0, 20) : '';
+  const steps = Array.isArray(obj.steps)
+    ? obj.steps.filter(function (s) { return typeof s === 'string' && s.trim(); }).map(function (s) { return s.trim(); }).slice(0, 8)
+    : [];
+  if (!name || !steps.length) return null;
+  const ings = Array.isArray(obj.ings)
+    ? obj.ings.filter(function (s) { return typeof s === 'string' && s.trim(); }).map(function (s) { return s.trim(); }).slice(0, 12)
+    : [];
+  return {
+    name: name,
+    steps: steps,
+    ings: ings,
+    desc: typeof obj.desc === 'string' ? obj.desc.trim().slice(0, 120) : '',
+    tips: typeof obj.tips === 'string' ? obj.tips.trim().slice(0, 200) : '',
+    time: (typeof obj.time === 'string' && obj.time.trim()) ? obj.time.trim() : '约30分钟',
+    scene: (typeof obj.scene === 'string' && obj.scene.trim()) ? obj.scene.trim() : '家常',
+    plating: typeof obj.plating === 'string' ? obj.plating.trim() : '',
+    warning: typeof obj.warning === 'string' ? obj.warning.trim() : '',
+    darkScore: 20,
+    lib: false,
+    emoji: '🍳',
+    video: null
+  };
+}
+
+async function aiGeneratePlan(ings, count) {
+  try {
+    const text = await aiJson([
+      { role: 'system', content: WEEK_PLAN_PROMPT },
+      { role: 'user', content: '我的冰箱食材：' + ings + '\n请规划 ' + count + ' 道不重复的菜。' }
+    ], 2);
+    const arr = extractJsonArray(text);
+    if (!arr || !arr.length) return null;
+    const out = [];
+    const seen = new Set();
+    for (const it of arr) {
+      const n = normalizePlanItem(it);
+      if (n && !seen.has(n.name)) { seen.add(n.name); out.push(n); }
+      if (out.length >= count) break;
+    }
+    return out.length >= Math.min(count, 5) ? out : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function aiMealPrep(ingredient) {
+  try {
+    const text = await aiJson([
+      { role: 'system', content: MEAL_PREP_PROMPT },
+      { role: 'user', content: '批量采购的食材：' + ingredient }
+    ], 2);
+    const arr = extractJsonArray(text);
+    if (!arr || !arr.length) return null;
+    const out = [];
+    for (const it of arr) {
+      if (!it || typeof it !== 'object') continue;
+      const method = typeof it.method === 'string' ? it.method.trim() : '';
+      if (!method) continue;
+      out.push({
+        method: method.slice(0, 20),
+        storage: typeof it.storage === 'string' ? it.storage.trim().slice(0, 10) : '',
+        shelfLife: typeof it.shelfLife === 'string' ? it.shelfLife.trim().slice(0, 10) : '',
+        recipeName: typeof it.recipeName === 'string' ? it.recipeName.trim().slice(0, 20) : '',
+        desc: typeof it.desc === 'string' ? it.desc.trim().slice(0, 120) : ''
+      });
+      if (out.length >= 5) break;
+    }
+    return out.length ? out : null;
+  } catch (e) {
+    return null;
+  }
+}
+
+async function aiReverse(text, ings) {
+  try {
+    const raw = await aiJson([
+      { role: 'system', content: REVERSE_PROMPT },
+      { role: 'user', content: '用户说："' + text + '"。冰箱现有食材：' + (ings || '（未知）') }
+    ], 2);
+    const obj = extractJson(raw);
+    if (!obj || typeof obj !== 'object') return null;
+    const resultName = typeof obj.resultName === 'string' ? obj.resultName.trim().slice(0, 30) : '';
+    if (!resultName) return null;
+    return {
+      want: typeof obj.want === 'string' ? obj.want.trim().slice(0, 20) : '',
+      missing: typeof obj.missing === 'string' ? obj.missing.trim().slice(0, 20) : '',
+      substitute: typeof obj.substitute === 'string' ? obj.substitute.trim().slice(0, 20) : '',
+      resultName: resultName,
+      recipe: normalizePlanItem(obj.recipe),
+      tip: typeof obj.tip === 'string' ? obj.tip.trim().slice(0, 200) : ''
+    };
+  } catch (e) {
+    return null;
+  }
 }
 
 // ---------- 红黑榜 / 博物馆 ----------
@@ -710,6 +866,37 @@ exports.main = async (rawEvent) => {
       if (!rr.success) return { success: false, error: rr.error };
       await saveRoom(room);
       return { success: true, data: duelView(room, uid) };
+    }
+
+    // 周计划管家：AI 批量生成一周不重复菜谱
+    if (action === 'weekPlan') {
+      const ingList = Array.isArray(event.ingredients)
+        ? event.ingredients.filter(function (s) { return typeof s === 'string' && s.trim(); }).join('、')
+        : String(event.ingredients || '').trim();
+      const count = Math.min(Math.max(parseInt(event.count, 10) || 7, 1), 14);
+      if (!ingList) return { success: false, error: '请先填写冰箱食材' };
+      const plan = await aiGeneratePlan(ingList, count);
+      if (!plan) return { success: false, error: 'AI 生成失败，请稍后再试' };
+      return { success: true, data: { plan: plan } };
+    }
+
+    // 备菜指南：AI 生成批量食材预处理方案
+    if (action === 'mealPrep') {
+      const ingredient = String(event.ingredient || '').trim();
+      if (!ingredient) return { success: false, error: '食材不能为空' };
+      const plan = await aiMealPrep(ingredient);
+      if (!plan) return { success: false, error: 'AI 生成失败，请稍后再试' };
+      return { success: true, data: { ingredient: ingredient, plan: plan } };
+    }
+
+    // 反向搜索：想吃 X 但缺 Y → 冰箱食材平替
+    if (action === 'reverseSearch') {
+      const text = String(event.text || '').trim();
+      if (!text) return { success: false, error: '请输入想吃的内容' };
+      const ings = String(event.ingredients || '').trim();
+      const res = await aiReverse(text, ings);
+      if (!res) return { success: false, error: 'AI 生成失败，请稍后再试' };
+      return { success: true, data: res };
     }
 
     // 默认动作：generate（生成菜谱 + 生存挑战打卡/积分）

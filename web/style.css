@@ -1196,3 +1196,89 @@ html, body {
   box-shadow: 0 4px 14px rgba(255,45,120,.4); transition: transform .15s;
 }
 .video-play:hover { transform: translateY(-1px); }
+
+/* ===== 厨房生活管家（周计划 / 备菜 / 反向搜索 / 厨房模式 / 带饭标签） ===== */
+.tool-card { background: rgba(20,28,56,.75); border: 2px solid rgba(0,240,255,.25); border-radius: 16px; box-shadow: 0 0 24px rgba(0,240,255,.08); padding: 14px 16px; margin-top: 16px; }
+.tool-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+.tool-emoji { font-size: 26px; }
+.tool-text b { font-size: 16px; color: #00f0ff; }
+.tool-text p { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 2px; }
+.tool-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tool-btn { padding: 9px 14px; border-radius: 999px; border: 1px solid rgba(0,240,255,.4); background: rgba(0,240,255,.08); color: #00f0ff; font-size: 13px; font-family: inherit; cursor: pointer; transition: transform .15s; }
+.tool-btn:hover { transform: translateY(-1px); }
+.tool-btn.primary { background: linear-gradient(135deg, #00b3d6, #00f0ff); color: #06222a; font-weight: 900; border: none; }
+.tool-input-row { display: flex; gap: 8px; }
+.tool-input { flex: 1; min-width: 0; background: rgba(255,255,255,.06); border: 1px solid rgba(0,240,255,.3); border-radius: 12px; color: #e6f7ff; padding: 10px 12px; font-size: 14px; font-family: inherit; outline: none; }
+.tool-input:focus { border-color: #00f0ff; }
+.tool-empty { color: rgba(255,255,255,.45); font-size: 13px; padding: 8px 2px; }
+
+/* 周计划 */
+.week-plan-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+.week-day { background: rgba(0,240,255,.06); border: 1px solid rgba(0,240,255,.22); border-radius: 12px; padding: 10px 12px; cursor: pointer; transition: transform .15s; }
+.week-day:hover { transform: translateY(-2px); border-color: #00f0ff; }
+.week-day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.week-day-label { color: #ffd166; font-size: 13px; }
+.week-day-date { color: rgba(255,255,255,.4); font-size: 11px; }
+.week-day-name { font-size: 15px; font-weight: 900; margin-top: 6px; color: #fff; }
+.week-day-meta { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 4px; }
+.week-day .lunchbox-tag { margin-top: 6px; margin-left: 0; }
+
+/* 买菜清单 */
+.week-shop { margin-top: 12px; background: rgba(255,45,120,.06); border: 1px solid rgba(255,45,120,.3); border-radius: 14px; padding: 12px; }
+.week-shop-head { font-weight: 900; color: #ffb199; font-size: 14px; margin-bottom: 8px; }
+.week-shop-list { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
+.week-shop-item { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15); border-radius: 999px; padding: 5px 12px; font-size: 13px; }
+.week-shop-item.have { border-color: rgba(0,240,255,.5); color: #00f0ff; }
+
+/* 备菜 */
+.prep-list { margin-top: 12px; display: grid; gap: 10px; }
+.prep-head { font-size: 13px; color: rgba(255,255,255,.5); margin-bottom: 2px; }
+.prep-item { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: rgba(0,240,255,.05); border: 1px solid rgba(0,240,255,.2); border-radius: 12px; padding: 10px 12px; cursor: pointer; }
+.prep-main { min-width: 0; }
+.prep-method { display: block; color: #ffd166; font-size: 15px; }
+.prep-recipe { font-size: 12px; color: rgba(255,255,255,.6); }
+.prep-desc { font-size: 12px; color: rgba(255,255,255,.45); margin-top: 2px; }
+.prep-meta { flex-shrink: 0; font-size: 12px; color: #00f0ff; }
+
+/* 反向搜索 */
+.reverse-result { margin-top: 12px; }
+.reverse-inner { background: rgba(0,240,255,.05); border: 1px solid rgba(0,240,255,.25); border-radius: 14px; padding: 12px 14px; }
+.reverse-flag { font-size: 11px; color: rgba(255,255,255,.4); margin-bottom: 6px; }
+.reverse-want { font-size: 13px; color: rgba(255,255,255,.7); }
+.reverse-name { font-size: 18px; font-weight: 900; color: #ffd166; margin-top: 6px; }
+.reverse-sub { font-size: 13px; color: #00f0ff; margin-top: 4px; }
+.reverse-tip { font-size: 12px; color: rgba(255,255,255,.5); margin-top: 6px; }
+.reverse-inner .tool-btn { margin-top: 10px; }
+
+/* 带饭标签 */
+.lunchbox-tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; margin-left: 8px; vertical-align: middle; white-space: nowrap; }
+.lunchbox-tag.lb-good { background: rgba(0,230,118,.14); color: #00e676; border: 1px solid rgba(0,230,118,.45); }
+.lunchbox-tag.lb-ok { background: rgba(255,209,102,.14); color: #ffd166; border: 1px solid rgba(255,209,102,.45); }
+.lunchbox-tag.lb-bad { background: rgba(255,45,120,.14); color: #ff6b9d; border: 1px solid rgba(255,45,120,.45); }
+
+/* 厨房模式按钮 */
+.kitchen-open-btn { display: block; width: 100%; margin-top: 10px; padding: 12px; border-radius: 14px; border: none; background: linear-gradient(135deg, #00b3d6, #00f0ff); color: #06222a; font-weight: 900; font-size: 15px; font-family: inherit; cursor: pointer; }
+
+/* 厨房模式全屏 */
+.kitchen-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 300; }
+.kitchen-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(4,8,20,.96); }
+.kitchen-card { position: relative; z-index: 1; display: flex; flex-direction: column; height: 100%; padding: 20px; max-width: 760px; margin: 0 auto; }
+.kitchen-head { display: flex; align-items: center; gap: 10px; }
+.kitchen-name { flex: 1; min-width: 0; font-size: 22px; color: #00f0ff; text-shadow: 0 0 14px rgba(0,240,255,.6); }
+.kitchen-heat { font-size: 24px; }
+.kitchen-close { background: none; border: none; color: #fff; font-size: 24px; cursor: pointer; padding: 6px; }
+.kitchen-body { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; padding: 20px 4px; min-height: 0; }
+.kitchen-counter b { font-size: 16px; color: #ffd166; }
+.kitchen-counter span { font-size: 13px; color: rgba(255,255,255,.5); margin-left: 8px; }
+.kitchen-step { font-size: clamp(26px, 6vw, 44px); font-weight: 900; line-height: 1.45; color: #fff; margin-top: 18px; max-width: 640px; word-break: break-word; }
+.kitchen-video { margin-top: 18px; color: #00f0ff; font-size: 14px; text-decoration: none; border: 1px solid rgba(0,240,255,.4); padding: 8px 16px; border-radius: 999px; }
+.kitchen-actions { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; padding-bottom: env(safe-area-inset-bottom); }
+.kitchen-btn { padding: 16px 10px; border-radius: 16px; border: 1px solid rgba(0,240,255,.35); background: rgba(0,240,255,.08); color: #00f0ff; font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
+.kitchen-btn.kitchen-primary { background: linear-gradient(135deg, #00b3d6, #00f0ff); color: #06222a; border: none; }
+
+/* 桌面端自适应 */
+@media (min-width: 768px) {
+  .week-plan-list { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+  .kitchen-card { padding: 28px 40px; }
+  .kitchen-actions { grid-template-columns: repeat(4, 1fr); }
+}

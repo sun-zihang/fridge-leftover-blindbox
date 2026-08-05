@@ -82,7 +82,56 @@
           <button id="fridgeCook" class="fridge-cook-btn" type="button">🧊 用冰箱剩菜开盲盒</button>
         </div>
       </div>
-    </section>    <section class="input-card">
+    </section>
+    <section class="tool-card week-card">
+      <div class="tool-head">
+        <span class="tool-emoji">🗓️</span>
+        <div class="tool-text"><b>周计划管家</b><p>用冰箱食材一键排下周 7 天不重样，统筹买菜清单</p></div>
+      </div>
+      <div class="tool-body">
+        <div class="tool-actions">
+          <button id="weekPlanGo" class="tool-btn primary" type="button">🗓️ 一键生成下周菜谱</button>
+          <button id="weekShopToggle" class="tool-btn hidden" type="button">🛒 统筹买菜清单</button>
+        </div>
+        <div id="weekPlanList" class="week-plan-list"></div>
+        <div id="weekShopBox" class="week-shop hidden">
+          <div class="week-shop-head">🛒 一周采购清单 <span class="shopping-sub">冰箱已有的自动扣除</span></div>
+          <div id="weekShopList" class="week-shop-list"></div>
+          <div class="shopping-tools">
+            <button id="weekShopCopy" class="shop-tool-btn" type="button">📋 复制清单</button>
+            <button id="weekShopExport" class="shop-tool-btn" type="button">📤 导出 .txt</button>
+            <button id="weekShopBuy" class="shop-tool-btn" type="button">🧺 去外卖买菜</button>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section class="tool-card prep-card">
+      <div class="tool-head">
+        <span class="tool-emoji">🥡</span>
+        <div class="tool-text"><b>备菜指南</b><p>批量买回一种食材，教你怎么预处理最省事</p></div>
+      </div>
+      <div class="tool-body">
+        <div class="tool-input-row">
+          <input id="prepInput" class="tool-input" maxlength="20" placeholder="如：鸡胸肉">
+          <button id="prepGo" class="tool-btn primary" type="button">🧊 生成备菜方案</button>
+        </div>
+        <div id="prepList" class="prep-list"></div>
+      </div>
+    </section>
+    <section class="tool-card reverse-card">
+      <div class="tool-head">
+        <span class="tool-emoji">🤖</span>
+        <div class="tool-text"><b>反向搜索 · 平替主厨</b><p>“想吃糖醋排骨，但没排骨了”——冰箱里有啥就用啥</p></div>
+      </div>
+      <div class="tool-body">
+        <div class="tool-input-row">
+          <input id="reverseInput" class="tool-input" maxlength="40" placeholder="如：想吃糖醋排骨，但没排骨了">
+          <button id="reverseGo" class="tool-btn primary" type="button">🔍 找平替</button>
+        </div>
+        <div id="reverseResult" class="reverse-result"></div>
+      </div>
+    </section>
+    <section class="input-card">
       <textarea id="ingredients" maxlength="200" rows="3" placeholder="例如：半个洋葱、两包泡面、一瓶可乐"></textarea>
       <div class="input-footer">
         <button id="micBtn" class="mic-btn hidden" type="button">🎙️ 语音输入</button>
@@ -179,6 +228,7 @@
 
     <div id="result" class="result hidden">
       <h2 id="dishName" class="dish-name neon-pink"></h2>
+      <span id="lunchboxTag" class="lunchbox-tag hidden"></span>
       <div id="eventBanner" class="event-banner hidden"></div>
       <div id="chefResult" class="chef-avatar chef-result">👨‍🍳</div>
       <p id="dishIngredients" class="dish-ingredients"></p>
@@ -233,6 +283,7 @@
       <button id="detailBtn" class="detail-btn hidden" type="button">📖 查看完整菜单</button>
       <div id="videoBox" class="video-box hidden"></div>
       <button id="favBtn" class="fav-btn hidden" type="button">⭐ 收藏菜谱</button>
+      <button id="kitchenOpen" class="kitchen-open-btn hidden" type="button">👨‍🍳 厨房模式 · 语音播报</button>
 
       <div class="rate-row">
         <span class="rate-title">这菜你觉得？</span>
@@ -276,11 +327,34 @@
   </footer>
   </div>
 
+  <div id="kitchenModal" class="kitchen-modal hidden">
+    <div class="kitchen-backdrop"></div>
+    <div class="kitchen-card">
+      <div class="kitchen-head">
+        <b id="kitchenName" class="kitchen-name"></b>
+        <span id="kitchenHeat" class="kitchen-heat"></span>
+        <button id="kitchenClose" class="kitchen-close" type="button" aria-label="退出">✕</button>
+      </div>
+      <div class="kitchen-body">
+        <div class="kitchen-counter"><b id="kitchenIdx">1/1</b><span id="kitchenStepLabel">第 1 步</span></div>
+        <p id="kitchenStep" class="kitchen-step"></p>
+        <a id="kitchenVideo" class="kitchen-video hidden" href="#" target="_blank" rel="noopener">🎬 看视频参考</a>
+      </div>
+      <div class="kitchen-actions">
+        <button id="kitchenPrev" class="kitchen-btn" type="button">◀ 上一步</button>
+        <button id="kitchenNext" class="kitchen-btn kitchen-primary" type="button">下一步 ▶</button>
+        <button id="kitchenSpeak" class="kitchen-btn" type="button">🔊 播报</button>
+        <button id="kitchenVoice" class="kitchen-btn" type="button">🎙️ 语音控制</button>
+      </div>
+    </div>
+  </div>
+
   <div id="detailModal" class="detail-modal hidden">
     <div class="detail-modal-backdrop"></div>
     <div class="detail-modal-card">
       <button id="detailModalClose" class="detail-modal-close" type="button" aria-label="关闭">×</button>
       <div id="detailBody" class="detail-body"></div>
+      <button id="kitchenDetailBtn" class="kitchen-open-btn" type="button">👨‍🍳 厨房模式 · 语音播报</button>
     </div>
   </div>
 
@@ -360,6 +434,7 @@
   <script src="./normalRecipes.js"></script>
   <script src="./iddzzRecipes.js"></script>
   <script src="./howToCookRecipes.js"></script>
+  <script src="./practical.js"></script>
   <script src="./app.js"></script>
 </body>
 </html>
