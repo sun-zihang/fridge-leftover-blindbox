@@ -399,9 +399,13 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
         var r = res && res.result ? res.result : {};
         if (!r.success) throw new Error(r.error || '甩锅失败');
         var link = location.origin + location.pathname + '?challenge=' + encodeURIComponent(r.data.challengeId);
-        if (navigator.share) {
-          navigator.share({ title: '冰箱剩菜盲盒 · 好友投喂', text: '我甩给你一道黑暗料理，敢接受挑战吗？', url: link }).catch(function () { copyLink(link); });
-        } else { copyLink(link); }
+        state.challengeLink = link;
+        // 以「甩锅卡」图片形式甩锅：绘制海报 + 展示（可下载/分享）
+        drawPoster(state.recipe, els.ingredients.value.trim(), 'buck');
+        els.posterSection.classList.remove('hidden');
+        els.posterSection.scrollIntoView({ behavior: 'smooth' });
+        soundPop();
+        toast('甩锅卡已生成，下载后发给好友吧！');
       })
       .catch(function (e) { toast((e && e.message) ? e.message : '甩锅失败'); });
   });
@@ -946,6 +950,7 @@ recognition.interimResults = true;
   function drawPoster(recipe, ingredients, skin) {
     if (skin === 'cert') return drawCertPoster(recipe, ingredients);
     if (skin === 'medical') return drawMedicalPoster(recipe, ingredients);
+    if (skin === 'buck') return drawBuckPoster(recipe, ingredients);
     var canvas = els.posterCanvas;
     var ctx = canvas.getContext('2d');
     var W = 750, H = 1200;
@@ -1182,7 +1187,82 @@ recognition.interimResults = true;
     ctx.fillText('冰箱剩菜盲盒 · 深夜食堂出品', W / 2, 1110);
   }
 
-  function drawQrCode(ctx, x, y, size) {
+  /* ===== 海报皮肤：甩锅卡（图片形式甩锅给好友） ===== */
+  function drawBuckPoster(recipe, ingredients) {
+    var canvas = els.posterCanvas;
+    var ctx = canvas.getContext('2d');
+    var W = 750, H = 1200;
+    ctx.clearRect(0, 0, W, H);
+    var bg = ctx.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, '#2a0a12');
+    bg.addColorStop(0.6, '#14070f');
+    bg.addColorStop(1, '#0a0e1a');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, W, H);
+    // 警示边框
+    ctx.strokeStyle = '#ff2d55';
+    ctx.lineWidth = 10;
+    ctx.strokeRect(28, 28, W - 56, H - 56);
+    ctx.strokeStyle = 'rgba(255,45,85,.35)';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(42, 42, W - 84, H - 84);
+    // 标题
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#ff2d55';
+    ctx.font = 'bold 42px sans-serif';
+    ctx.fillText('🔥 甩锅卡 · 锅从天上来', W / 2, 110);
+    ctx.fillStyle = '#ffe9a8';
+    ctx.font = '26px sans-serif';
+    ctx.fillText('甩锅给好友 · 要死一起死', W / 2, 158);
+    // 分割线
+    ctx.strokeStyle = 'rgba(255,45,85,.5)';
+    ctx.beginPath(); ctx.moveTo(120, 200); ctx.lineTo(W - 120, 200); ctx.stroke();
+    // 菜名
+    ctx.fillStyle = '#ff6b81';
+    ctx.font = '30px sans-serif';
+    ctx.fillText('这道「', W / 2, 270);
+    glowText(ctx, recipe.name, W / 2, 360, 'bold 76px sans-serif', '#ff2d55', 32);
+    ctx.fillStyle = '#ff6b81';
+    ctx.font = 'bold 34px sans-serif';
+    ctx.fillText('是 TA 让我做的！', W / 2, 440);
+    // 食材
+    if (ingredients) {
+      ctx.fillStyle = '#c9a0b0';
+      ctx.font = '28px sans-serif';
+      wrapText(ctx, '罪证食材：' + ingredients, 90, 520, W - 180, 40, 'center');
+    }
+    // 主厨警告
+    ctx.fillStyle = '#ff9aa8';
+    ctx.font = '26px sans-serif';
+    wrapText(ctx, '主厨警告：' + (recipe.warning || ''), 90, 600, W - 180, 38, 'center');
+    // 二维码：扫了直接接锅
+    var link = state.challengeLink || location.href;
+    drawQrCode(ctx, W - 190, 740, 140, link);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = '#ffd700';
+    ctx.font = 'bold 30px sans-serif';
+    ctx.fillText('📱 扫码接锅', 90, 800);
+    ctx.fillStyle = '#ffe9a8';
+    ctx.font = '24px sans-serif';
+    wrapText(ctx, 'TA 把这口锅甩给你了！扫码打开，敢不敢接下这道「' + recipe.name + '」？', 90, 850, W - 320, 36, 'left');
+    // 底部
+    ctx.strokeStyle = 'rgba(255,255,255,.25)';
+    ctx.setLineDash([10, 10]);
+    ctx.beginPath(); ctx.moveTo(70, H - 150); ctx.lineTo(W - 70, H - 150); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#ff2d55';
+    ctx.font = 'bold 32px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🍲 冰箱剩菜盲盒 · 深夜食堂', W / 2, H - 110);
+    ctx.fillStyle = '#9a7b88';
+    ctx.font = '24px sans-serif';
+    ctx.fillText('接下挑战，双方各 +20 生存积分', W / 2, H - 72);
+    ctx.fillStyle = '#6b5b66';
+    ctx.font = '20px sans-serif';
+    ctx.fillText('长按保存 · 甩给「幸运」好友', W / 2, H - 40);
+  }
+
+  function drawQrCode(ctx, x, y, size, url) {
     ctx.save();
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(x, y, size, size);
@@ -1204,7 +1284,7 @@ recognition.interimResults = true;
       ctx.drawImage(img, x, y, size, size);
     };
     img.onerror = function () { /* 保留占位 */ };
-    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(location.href);
+    img.src = 'https://api.qrserver.com/v1/create-qr-code/?size=' + size + 'x' + size + '&data=' + encodeURIComponent(url || location.href);
   }
 
   function glowText(ctx, text, x, y, font, color, blur) {
@@ -1242,7 +1322,8 @@ recognition.interimResults = true;
     var dataUrl = els.posterCanvas.toDataURL('image/png');
     var a = document.createElement('a');
     a.href = dataUrl;
-    a.download = '冰箱剩菜盲盒_' + ((state.recipe && state.recipe.name) || '海报') + '.png';
+    var skinName = state.posterSkin === 'buck' ? '甩锅卡' : '冰箱剩菜盲盒';
+    a.download = skinName + '_' + ((state.recipe && state.recipe.name) || '海报') + '.png';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

@@ -75,7 +75,7 @@ html, body {
 
 /* 主按钮 */
 .generate-btn {
-  width: 100%; margin-top: 22px;
+  width: 100%; margin-top: 14px;
   padding: 14px 0;
   border: none; border-radius: 14px;
   background: linear-gradient(135deg, #00f0ff, #b026ff);
@@ -458,7 +458,7 @@ html, body {
 
 
 /* ===== 菜谱口味模式 ===== */
-.mode-row { margin-top: 16px; display: flex; align-items: center; gap: 10px; }
+.mode-row { margin-top: 12px; display: flex; align-items: center; gap: 10px; }
 .mode-label { color: #8ea2c8; font-size: 13px; }
 .mode-switch { display: inline-flex; background: rgba(255,255,255,.05); border-radius: 999px; padding: 3px; }
 .mode-btn { border: none; background: none; color: #9db1d4; font-size: 13px; padding: 6px 16px; border-radius: 999px; cursor: pointer; font-family: inherit; }
@@ -640,7 +640,7 @@ html, body {
 }
 
 /* 音效开关 */
-.sound-row { margin: 8px 0; text-align: center; }
+.sound-row { margin: 6px 0; text-align: center; }
 .sound-btn {
   padding: 6px 16px; border-radius: 18px; cursor: pointer;
   background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.18);
@@ -672,7 +672,7 @@ html, body {
 .result.skin-sick .dish-name { color: #b6f0c0; text-shadow: 0 0 18px rgba(122,222,140,.8); }
 
 /* ===== 主厨人设 ===== */
-.persona-row { margin: 10px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.persona-row { margin: 8px 0; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .persona-switch { display: flex; gap: 8px; flex-wrap: wrap; }
 .persona-btn {
   padding: 7px 14px; border-radius: 18px; cursor: pointer; font-size: 13px;
