@@ -1277,7 +1277,9 @@ recognition.interimResults = true;
     ctx.fillStyle = '#ff6b81';
     ctx.font = '30px sans-serif';
     ctx.fillText('这道「', W / 2, 270);
-    glowText(ctx, recipe.name, W / 2, 360, 'bold 76px sans-serif', '#ff2d55', 32);
+    var buckName = recipe.name || '';
+    var buckFont = buckName.length > 8 ? 'bold 52px sans-serif' : 'bold 76px sans-serif';
+    glowText(ctx, shortenText(buckName, 10), W / 2, 360, buckFont, '#ff2d55', 32);
     ctx.fillStyle = '#ff6b81';
     ctx.font = 'bold 34px sans-serif';
     ctx.fillText('是 TA 让我做的！', W / 2, 440);
@@ -1362,7 +1364,10 @@ recognition.interimResults = true;
 
   function wrapText(ctx, text, x, y, maxWidth, lineHeight, align) {
     if (!text) return y;
-    ctx.textAlign = align || 'left';
+    // align='center' ???????????? x????????????????/??
+    var isCenter = align === 'center';
+    ctx.textAlign = isCenter ? 'center' : (align || 'left');
+    if (isCenter) x = x + maxWidth / 2;
     var chars = String(text).split('');
     var line = '';
     for (var i = 0; i < chars.length; i++) {
