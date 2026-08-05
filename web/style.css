@@ -1178,3 +1178,21 @@ html, body {
 .fav-item .fi-del { border: none; background: none; color: rgba(255,255,255,.4); font-size: 18px; cursor: pointer; }
 .fav-item .fi-del:hover { color: #ff5a76; }
 .fav-empty { font-size: 13px; color: rgba(255,255,255,.45); margin-top: 10px; }
+
+/* ===== ?????? ===== */
+.video-box { margin: 10px 0 12px; display: flex; flex-direction: column; gap: 10px; }
+.video-item {
+  display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255,45,85,.12), rgba(255,138,0,.1));
+  border: 1px solid rgba(255,45,85,.4);
+}
+.video-info { flex: 1; min-width: 0; }
+.video-info b { display: block; font-size: 14px; color: #ffb199; }
+.video-info span { font-size: 12px; color: rgba(255,255,255,.55); margin-top: 2px; display: block; }
+.video-play {
+  flex-shrink: 0; padding: 9px 16px; border-radius: 999px; text-decoration: none;
+  background: linear-gradient(135deg, #ff2d78, #ff8a00); color: #fff;
+  font-size: 14px; font-weight: 900; font-family: inherit;
+  box-shadow: 0 4px 14px rgba(255,45,120,.4); transition: transform .15s;
+}
+.video-play:hover { transform: translateY(-1px); }

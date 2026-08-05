@@ -121,7 +121,8 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     shopExport: $('shopExport'),
     favBtn: $('favBtn'),
     favTabs: $('favTabs'),
-    favList: $('favList')
+    favList: $('favList'),
+    videoBox: $('videoBox')
   };
 
   /* ===== 工具 ===== */
@@ -778,6 +779,7 @@ recognition.interimResults = true;
     els.stepsToggle.classList.remove('open');
     els.warningToggle.classList.remove('open');
     renderNutrition(ingredients, recipe);
+    renderVideoRecommend(ingredients, recipe);
     state.lastIngredients = ingredients;
     updateFavBtn();
     renderDarkScore(recipe);
@@ -899,8 +901,13 @@ recognition.interimResults = true;
   /* ===== 演示模式兜底 ===== */
   function demoRecipe(ingredients) {
     // 正常家常模式：优先从内置菜谱库（206 道家常菜）出菜
-    if (state.mode === 'normal' && window.NORMAL_RECIPES) {
-      return window.NORMAL_RECIPES.getNormalAppRecipe(ingredients);
+    // 正常家常模式：优先用 iddzz 家常菜库（带演示视频），没有再退回内置 206 道库
+    if (state.mode === 'normal') {
+      if (window.IDDZZ_RECIPES) {
+        var dm = window.IDDZZ_RECIPES.matchByIngredients(ingredients);
+        if (dm.length) return window.IDDZZ_RECIPES.toAppRecipe(dm[0].recipe);
+      }
+      if (window.NORMAL_RECIPES) return window.NORMAL_RECIPES.getNormalAppRecipe(ingredients);
     }
     var pool = [
       {
@@ -2778,4 +2785,35 @@ recognition.interimResults = true;
   /* ---- 初始化：渲染冰箱 + 收藏 ---- */
   loadFridge(); renderFridge();
   loadFavs(); renderFavTabs(); renderFavs();
+
+  /* ===== 演示视频推荐（iddzz 菜谱库，bilibili 链接） ===== */
+  function renderVideoRecommend(ings, recipe) {
+    if (!window.IDDZZ_RECIPES) { els.videoBox.classList.add('hidden'); return; }
+    var list = [];
+    if (recipe && recipe.video) {
+      list.push({ title: recipe.video.title || recipe.name + ' 家常做法', url: recipe.video.url, name: recipe.name, direct: true });
+    } else {
+      var matches = window.IDDZZ_RECIPES.matchByIngredients(ings);
+      for (var i = 0; i < matches.length && list.length < 2; i++) {
+        var r = matches[i].recipe;
+        if (r.video) list.push({ title: r.video.title || r.name + ' 家常做法', url: r.video.url, name: r.name, direct: false });
+      }
+    }
+    if (!list.length) { els.videoBox.classList.add('hidden'); return; }
+    els.videoBox.classList.remove('hidden');
+    els.videoBox.textContent = '';
+    list.forEach(function (v) {
+      var card = document.createElement('div'); card.className = 'video-item';
+      var info = document.createElement('div'); info.className = 'video-info';
+      var t = document.createElement('b');
+      t.textContent = v.direct ? '🎬 ' + v.name + ' 演示视频' : '🎬 相近菜：' + v.name;
+      var sub = document.createElement('span');
+      sub.textContent = v.direct ? '跟着视频一步步做，翻车率更低' : '这道菜 B 站有完整教程，照着做更稳';
+      info.appendChild(t); info.appendChild(sub);
+      var btn = document.createElement('a'); btn.className = 'video-play'; btn.textContent = '▶ 播放';
+      btn.href = v.url; btn.target = '_blank'; btn.rel = 'noopener noreferrer';
+      card.appendChild(info); card.appendChild(btn);
+      els.videoBox.appendChild(card);
+    });
+  }
 })();
