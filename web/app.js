@@ -106,6 +106,7 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     accountBtn: $('accountBtn'),
     loginModal: $('loginModal'),
     loginName: $('loginName'),
+    loginErr: $('loginErr'),
     loginOk: $('loginOk')
   };
 
@@ -1558,7 +1559,7 @@ recognition.interimResults = true;
 
       var user = document.createElement('div');
       user.className = 'rank-user';
-      user.textContent = item.user ? '\u{1F464} ' + item.user : '';
+      user.textContent = item.user ? '\uD83D\uDC64 ' + item.user : '';
       card.appendChild(user);
       var comment = document.createElement('div');
       comment.className = 'rank-comment';
@@ -1597,7 +1598,7 @@ recognition.interimResults = true;
     els.rankModalDish.textContent = item.dish || '';
     els.rankModalTag.textContent = item.rating || '';
     els.rankModalTag.className = 'rank-modal-tag ' + (item.rating === '已进医院' ? 'tag-bad' : 'tag-good');
-    els.rankModalComment.textContent = (item.user ? '\u{1F464} ' + item.user + '  \u00B7  ' : '') + (item.comment || '');
+    els.rankModalComment.textContent = (item.user ? '\uD83D\uDC64 ' + item.user + '  \u00B7  ' : '') + (item.comment || '');
     var rd = item.recipe_data || item.recipe || null;
     var hasRecipe = !!(rd && Array.isArray(rd.steps) && rd.steps.length);
     state.rankDetailRecipe = hasRecipe ? rd : null;
@@ -2200,7 +2201,7 @@ recognition.interimResults = true;
     if (duel.submitting) return;
     duel.submitting = true;
     var btn = document.querySelector('#duelBody button.duel-primary');
-    if (btn) { btn.disabled = true; btn.textContent = '\u{1F372} AI \u7206\u7092\u4E2D\u2026'; }
+    if (btn) { btn.disabled = true; btn.textContent = '\uD83C\uDF72 AI \u7206\u7092\u4E2D\u2026'; }
     callDuel({ action: 'duelCook', roomId: duel.roomId }, function (d) {
       duel.submitting = false;
       if (d.myRecipe) duel.myRecipe = d.myRecipe;
@@ -2486,18 +2487,27 @@ recognition.interimResults = true;
   var accountName = localStorage.getItem(ACCOUNT_KEY) || '';
   function getAccountName() { return accountName || ''; }
   function renderAccountBtn() {
-    els.accountBtn.textContent = accountName ? '\u{1F464} ' + accountName : '\u{1F464} \u672A\u767B\u5F55';
+    els.accountBtn.textContent = accountName ? '\uD83D\uDC64 ' + accountName : '\uD83D\uDC64 \u672A\u767B\u5F55';
     els.accountBtn.classList.toggle('not-logged', !accountName);
   }
   function openLoginModal() {
     els.loginModal.classList.remove('hidden');
     els.loginName.value = accountName || '';
+    els.loginName.classList.remove('error');
+    if (els.loginErr) els.loginErr.classList.add('hidden');
     setTimeout(function () { els.loginName.focus(); }, 60);
   }
   function closeLoginModal() { els.loginModal.classList.add('hidden'); }
   function saveLogin() {
     var n = els.loginName.value.trim().slice(0, 12);
-    if (!n) { toast('账号名不能为空'); return; }
+    if (!n) {
+      if (els.loginErr) els.loginErr.classList.remove('hidden');
+      els.loginName.classList.add('error');
+      toast('\u8BF7\u8F93\u5165\u8D26\u53F7\u540D');
+      return;
+    }
+    if (els.loginErr) els.loginErr.classList.add('hidden');
+    els.loginName.classList.remove('error');
     accountName = n;
     localStorage.setItem(ACCOUNT_KEY, n);
     renderAccountBtn();
@@ -2508,6 +2518,10 @@ recognition.interimResults = true;
   function ensureLogin() { if (!accountName) openLoginModal(); }
   els.accountBtn.addEventListener('click', openLoginModal);
   els.loginOk.addEventListener('click', saveLogin);
+  els.loginName.addEventListener('input', function () {
+    els.loginName.classList.remove('error');
+    if (els.loginErr) els.loginErr.classList.add('hidden');
+  });
   els.loginName.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveLogin(); });
   els.loginModal.addEventListener('click', function (e) {
     if (e.target === els.loginModal || e.target.classList.contains('login-backdrop')) closeLoginModal();
