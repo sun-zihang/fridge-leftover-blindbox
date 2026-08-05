@@ -299,6 +299,9 @@ async function listRank(tag) {
         if (w.user_rating === undefined && r && r.data && r.data.user_rating !== undefined) {
           w.user_rating = r.data.user_rating;
         }
+        if (w.user_name === undefined && r && r.data && r.data.user_name !== undefined) {
+          w.user_name = r.data.user_name;
+        }
       }
       return w;
     })
@@ -319,6 +322,7 @@ async function listRank(tag) {
       const rd = d.recipe_data || {};
       return {
         recordId: recId(d),
+        user_name: typeof d.user_name === 'string' ? d.user_name : '',
         name: typeof rd.name === 'string' && rd.name ? rd.name : '未命名料理',
         rating: typeof d.user_rating === 'string' ? d.user_rating : '',
         warning: typeof rd.warning === 'string' ? rd.warning : '',
@@ -388,7 +392,7 @@ exports.main = async (rawEvent) => {
         return { success: false, error: '参数不合法' };
       }
       await db.collection('recipes').doc(recordId).update({
-        data: { user_rating: rating, rate_time: db.serverDate() }
+        data: { user_rating: rating, rate_time: db.serverDate(), user_name: String(event.nickname || '').slice(0, 12) }
       });
       const p = await getOrCreatePlayer(uid);
       if (rating === '真香') { p.yummy_count += 1; p.points += 15; }

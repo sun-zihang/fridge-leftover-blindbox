@@ -13,6 +13,9 @@
       <h1 class="title neon-flicker">冰箱剩菜盲盒</h1>
       <p class="subtitle">深夜食堂主厨 · 在线整活</p>
     </header>
+    <div class="account-bar">
+      <button id="accountBtn" class="account-btn" type="button">👤 未登录</button>
+    </div>
 
     <section class="guide-section">
       <button id="guideToggle" class="guide-toggle" type="button">
@@ -280,7 +283,17 @@
     </div>
   </div>
 
-  <div id="duelView" class="duel-view hidden">
+  <div id="loginModal" class="login-modal hidden">
+    <div class="login-backdrop"></div>
+    <div class="login-card">
+      <div class="login-emoji">👨‍🍳</div>
+      <b class="login-title">给自己起个账号名</b>
+      <p class="login-sub">账号名会显示在红黑榜和对局里，方便好友认出你</p>
+      <input id="loginName" class="login-input" maxlength="12" placeholder="例如：深夜干饭人">
+      <button id="loginOk" class="login-ok" type="button">✅ 登录</button>
+      <p class="login-tip">稍后点顶部 👤 可修改</p>
+    </div>
+  </div>  <div id="duelView" class="duel-view hidden">
     <div class="duel-backdrop"></div>
     <div class="duel-card">
       <div class="duel-head">

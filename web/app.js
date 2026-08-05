@@ -102,7 +102,11 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     duelBody: $('duelBody'),
     eventBanner: $('eventBanner'),
     eggModal: $('eggModal'),
-    eggOk: $('eggOk')
+    eggOk: $('eggOk'),
+    accountBtn: $('accountBtn'),
+    loginModal: $('loginModal'),
+    loginName: $('loginName'),
+    loginOk: $('loginOk')
   };
 
   /* ===== 工具 ===== */
@@ -960,7 +964,7 @@ recognition.interimResults = true;
         return;
       }
       if (!state.recordId) return;
-      cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'rate', recordId: state.recordId, rating: rating } })
+      cloudApp.callFunction({ name: 'generateRecipe', data: { action: 'rate', recordId: state.recordId, rating: rating, nickname: accountName } })
         .then(function (res) {
           var r = res && res.result ? res.result : {};
           if (!r.success) throw new Error(r.error || '评价失败');
@@ -1495,6 +1499,7 @@ recognition.interimResults = true;
       var copy = {};
       for (var k in it) { if (Object.prototype.hasOwnProperty.call(it, k)) copy[k] = it[k]; }
       copy.tag = copy.tag || tagForDemo();
+      copy.user = DEMO_USERS[Math.floor(Math.random() * DEMO_USERS.length)];
       copy.recipe = recipeForDemo(it);
       return copy;
     });
@@ -1512,6 +1517,7 @@ recognition.interimResults = true;
             comment: item.warning || (item.ingredients ? '食材：' + item.ingredients : ''),
             rating: item.rating || '待评价',
             tag: item.tag || '硬核养生',
+            user: item.user_name || '',
             recipe_data: item.recipe_data || null,
             recordId: item.recordId || '',
             votes: item.votes || { up: 0, down: 0, net: 0 },
@@ -1550,6 +1556,10 @@ recognition.interimResults = true;
       dish.className = 'rank-dish';
       dish.textContent = item.dish;
 
+      var user = document.createElement('div');
+      user.className = 'rank-user';
+      user.textContent = item.user ? '\u{1F464} ' + item.user : '';
+      card.appendChild(user);
       var comment = document.createElement('div');
       comment.className = 'rank-comment';
       comment.textContent = item.comment || '';
@@ -1560,6 +1570,7 @@ recognition.interimResults = true;
 
       card.appendChild(emoji);
       card.appendChild(dish);
+      card.appendChild(user);
       card.appendChild(comment);
       card.appendChild(tag);
 
@@ -1586,7 +1597,7 @@ recognition.interimResults = true;
     els.rankModalDish.textContent = item.dish || '';
     els.rankModalTag.textContent = item.rating || '';
     els.rankModalTag.className = 'rank-modal-tag ' + (item.rating === '已进医院' ? 'tag-bad' : 'tag-good');
-    els.rankModalComment.textContent = item.comment || '';
+    els.rankModalComment.textContent = (item.user ? '\u{1F464} ' + item.user + '  \u00B7  ' : '') + (item.comment || '');
     var rd = item.recipe_data || item.recipe || null;
     var hasRecipe = !!(rd && Array.isArray(rd.steps) && rd.steps.length);
     state.rankDetailRecipe = hasRecipe ? rd : null;
@@ -1752,6 +1763,7 @@ recognition.interimResults = true;
     loadDaily();
     renderSynthPool();
     startDanmaku();
+    ensureLogin();
     if (!isDemo && cloudApp) {
       loadPlayer();
       handleChallengeParam();
@@ -2002,7 +2014,7 @@ recognition.interimResults = true;
     var nickInput = el('input', 'duel-nick', null);
     nickInput.type = 'text'; nickInput.maxLength = 12;
     nickInput.placeholder = '你的昵称（默认玩家A）';
-    nickInput.value = duel.nick || '';
+    nickInput.value = accountName || duel.nick || '';
     nickRow.appendChild(nickInput);
     b.appendChild(nickRow);
 
@@ -2466,4 +2478,39 @@ recognition.interimResults = true;
   els.duelView.addEventListener('click', function (e) {
     if (e.target === els.duelView || e.target.classList.contains('duel-backdrop')) closeDuel();
   });
+
+  var DEMO_USERS = ['深夜干饭人', '冰箱战神', '打工人阿伟', '米其林在逃', '吃瓜群众', '用户8848', '干饭魂', '减肥失败者'];
+
+  /* ===== 登录账号名 ===== */
+  var ACCOUNT_KEY = 'fridge_account_name';
+  var accountName = localStorage.getItem(ACCOUNT_KEY) || '';
+  function getAccountName() { return accountName || ''; }
+  function renderAccountBtn() {
+    els.accountBtn.textContent = accountName ? '\u{1F464} ' + accountName : '\u{1F464} \u672A\u767B\u5F55';
+    els.accountBtn.classList.toggle('not-logged', !accountName);
+  }
+  function openLoginModal() {
+    els.loginModal.classList.remove('hidden');
+    els.loginName.value = accountName || '';
+    setTimeout(function () { els.loginName.focus(); }, 60);
+  }
+  function closeLoginModal() { els.loginModal.classList.add('hidden'); }
+  function saveLogin() {
+    var n = els.loginName.value.trim().slice(0, 12);
+    if (!n) { toast('账号名不能为空'); return; }
+    accountName = n;
+    localStorage.setItem(ACCOUNT_KEY, n);
+    renderAccountBtn();
+    closeLoginModal();
+    soundDing();
+    toast('\u6B22\u8FCE\uFF0C' + n + '\uFF01');
+  }
+  function ensureLogin() { if (!accountName) openLoginModal(); }
+  els.accountBtn.addEventListener('click', openLoginModal);
+  els.loginOk.addEventListener('click', saveLogin);
+  els.loginName.addEventListener('keydown', function (e) { if (e.key === 'Enter') saveLogin(); });
+  els.loginModal.addEventListener('click', function (e) {
+    if (e.target === els.loginModal || e.target.classList.contains('login-backdrop')) closeLoginModal();
+  });
+  renderAccountBtn();
 })();
