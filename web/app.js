@@ -95,7 +95,14 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     synthGo: $('synthGo'),
     buyFab: $('buyFab'),
     buyModal: $('buyModal'),
-    buyModalClose: $('buyModalClose')
+    buyModalClose: $('buyModalClose'),
+    duelBtn: $('duelBtn'),
+    duelView: $('duelView'),
+    duelClose: $('duelClose'),
+    duelBody: $('duelBody'),
+    eventBanner: $('eventBanner'),
+    eggModal: $('eggModal'),
+    eggOk: $('eggOk')
   };
 
   /* ===== 工具 ===== */
@@ -610,6 +617,24 @@ recognition.interimResults = true;
   function generate() {
     var text = els.ingredients.value.trim();
     if (!text) { toast('先告诉我冰箱里有什么'); return; }
+﻿    // 彩蛋：鸡蛋+番茄连续 3 次 → 主厨拒绝（本地规则，不调 AI）
+    if (/(鸡蛋|蛋)/.test(text) && /(番茄|西红柿)/.test(text)) {
+      var etCount = parseInt(localStorage.getItem('fridge_egg_tomato') || '0', 10) + 1;
+      localStorage.setItem('fridge_egg_tomato', String(etCount));
+      if (etCount >= 3) {
+        localStorage.setItem('fridge_egg_tomato', '0');
+        openEggModal();
+        return;
+      }
+    } else {
+      localStorage.setItem('fridge_egg_tomato', '0');
+    }
+    // 彩蛋：前任/礼物 → 断舍离爆炒苦瓜（本地直接出菜，云函数侧同样处理）
+    if (/前任|礼物/.test(text)) {
+      finishGenerate(text, Object.assign({}, EX_RECIPE_WEB), '', true);
+      toast('💔 彩蛋触发：断舍离爆炒苦瓜');
+      return;
+    }
     if (state.generating) return;
     state.generating = true;
     els.genBtn.disabled = true;
@@ -620,7 +645,7 @@ recognition.interimResults = true;
 
     if (isDemo || !cloudApp) {
       setTimeout(function () {
-        finishGenerate(text, demoRecipe(text), '', true);
+        finishGenerate(text, demoEventRecipe(demoRecipe(text)), '', true);
       }, 1200);
       return;
     }
@@ -702,6 +727,31 @@ recognition.interimResults = true;
     els.genBtn.textContent = '召唤主厨 👨‍🍳';
     els.potLoading.classList.add('hidden');
 
+﻿    // 随机事件横幅 + 音效
+    var ev = recipe.event || null;
+    if (ev) {
+      els.eventBanner.classList.remove('hidden');
+      els.eventBanner.className = 'event-banner' + (ev.id === 'inspiration' ? ' ev-inspiration' : '');
+      els.eventBanner.innerHTML = '';
+      var evEmoji = document.createElement('span');
+      evEmoji.className = 'ev-emoji';
+      evEmoji.textContent = ev.emoji || '🎲';
+      var evTxt = document.createElement('span');
+      var evName = document.createElement('b');
+      evName.className = 'ev-name';
+      evName.textContent = '『' + (ev.name || '突发事件') + '』 ';
+      evTxt.appendChild(evName);
+      evTxt.appendChild(document.createTextNode(ev.line || ''));
+      els.eventBanner.appendChild(evEmoji);
+      els.eventBanner.appendChild(evTxt);
+      if (ev.id === 'inspiration') soundInspiration();
+      else if (ev.id === 'cat_spice') soundCat();
+      else if (ev.id === 'power_off') soundFlicker();
+      els.result.classList.add('ev-inspiration-glow');
+    } else {
+      els.eventBanner.classList.add('hidden');
+      els.result.classList.remove('ev-inspiration-glow');
+    }
     els.dishName.textContent = recipe.name;
     els.result.classList.remove('skin-gold', 'skin-sick');
     els.stepsWrap.classList.add('hidden');
@@ -905,7 +955,7 @@ recognition.interimResults = true;
         state.rated = true;
         els.result.classList.remove('skin-gold', 'skin-sick');
         els.result.classList.add(rating === '真香' ? 'skin-gold' : 'skin-sick');
-        if (rating === '已进医院') soundAlarm(); else soundDing();
+        if (rating === '已进医院') { soundSiren(); soundGlass(); } else { soundCheer(); }
         toast('演示模式：已评价 ' + rating);
         return;
       }
@@ -917,7 +967,7 @@ recognition.interimResults = true;
           state.rated = true;
           els.result.classList.remove('skin-gold', 'skin-sick');
           els.result.classList.add(rating === '真香' ? 'skin-gold' : 'skin-sick');
-          if (rating === '已进医院') soundAlarm(); else soundDing();
+          if (rating === '已进医院') { soundSiren(); soundGlass(); } else { soundCheer(); }
           toast('评价成功');
           state.posterSkin = rating === '真香' ? 'cert' : 'medical';
           els.posterBtn.textContent = rating === '真香' ? '生成米其林认证书 🏆' : '生成急诊挂号单 🏥';
@@ -1696,9 +1746,719 @@ recognition.interimResults = true;
     loadRank(ready);
     loadDaily();
     renderSynthPool();
+    startDanmaku();
     if (!isDemo && cloudApp) {
       loadPlayer();
       handleChallengeParam();
+      initDuelLink();
     }
+  });
+
+﻿  /* ===== 新增：彩蛋 / 随机事件 / 弹幕 / 双人对局（网页版） ===== */
+
+  /* ---- 输入框占位符轮换（贱萌文案） ---- */
+  var PLACEHOLDERS = [
+    '别光盯着屏幕，去翻翻冰箱底儿！',
+    '把冰箱里快过期的玩意儿都报上来',
+    '洋葱、泡面、可乐？越离谱越好',
+    '大胆点，把能找到的都扔进锅里',
+    '上次用辣条炖汤的那位，现在还健在吗',
+    '报菜名！剩下什么就报什么，别害羞'
+  ];
+  var phIdx = 0;
+  function rotatePlaceholder() {
+    phIdx = (phIdx + 1) % PLACEHOLDERS.length;
+    if (els.ingredients && document.activeElement !== els.ingredients) {
+      els.ingredients.placeholder = PLACEHOLDERS[phIdx];
+    }
+  }
+  els.ingredients.placeholder = PLACEHOLDERS[0];
+  setInterval(rotatePlaceholder, 8000);
+
+  /* ---- 彩蛋：断舍离爆炒苦瓜（本地兜底，云函数同样处理） ---- */
+  var EX_RECIPE_WEB = {
+    name: '断舍离爆炒苦瓜',
+    steps: [
+      '把苦瓜对半剖开，去瓤切片，就像清空和前任有关的缓存。',
+      '猛火爆炒，撒一把干辣椒，让眼泪和苦味一起断舍离。',
+      '装盘前把锅铲往桌上一拍：旧的不去，新的不来。'
+    ],
+    plating: '用纯白盘子盛出，苦瓜摆成"再见"两个字。',
+    warning: '感情债还不上，但苦瓜的苦，今晚必须咽下去。',
+    darkScore: 55,
+    darkTier: { label: '猎奇整活', emoji: '🤪', tip: '有点意思，肠胃准备接受挑战吧' },
+    easterEgg: true
+  };
+
+  /* ---- 随机事件（演示模式本地触发） ---- */
+  var WEB_EVENTS = [
+    { id: 'power_off', name: '停电了', emoji: '🕯️', line: '主厨被迫盲做：纯靠嗅觉来一道凉拌菜！' },
+    { id: 'cat_spice', name: '猫打翻了调料', emoji: '🐱', line: '猫主子打翻了调料罐，强制加入一味神秘香料！' },
+    { id: 'inspiration', name: '灵感爆发', emoji: '✨', line: '主厨灵光乍现，这道菜自带 BGM！' }
+  ];
+  function demoEventRecipe(recipe) {
+    if (Math.random() >= 0.1) return recipe;
+    var pool = state.mode === 'normal'
+      ? WEB_EVENTS.filter(function (e) { return e.id === 'inspiration'; })
+      : WEB_EVENTS;
+    var evt = pool[Math.floor(Math.random() * pool.length)];
+    var r = Object.assign({}, recipe);
+    r.event = evt;
+    if (evt.id === 'power_off') {
+      r.name = (r.name || '盲盒菜') + '·盲拌版';
+      r.steps = [
+        '把所有食材洗净切丝，全程不开火（停电了）。',
+        '闭着眼凭嗅觉撒盐、淋醋、拌香油。',
+        '装盘时默念：黑暗里也能吃上饭，这就是生活。'
+      ];
+      r.warning = '纯凉拌，停电夜限定，请确认食材生吃安全。';
+    } else if (evt.id === 'cat_spice') {
+      evt.spice = ['芥末', '花椒', '肉桂', '老干妈', '五香粉', '孜然'][Math.floor(Math.random() * 6)];
+      r.steps = (r.steps || []).concat(['临出锅前被猫打翻调料罐，猛撒一把' + evt.spice + '，认命吧。']);
+      r.warning = '这味道里有猫主子的倔强，请做好心理建设。';
+    }
+    return r;
+  }
+
+  /* ---- 主厨拒绝弹层（鸡蛋+番茄彩蛋） ---- */
+  function openEggModal() {
+    var m = document.getElementById('eggModal');
+    if (m) { m.classList.remove('hidden'); soundAlarm(); }
+  }
+  function closeEggModal() {
+    var m = document.getElementById('eggModal');
+    if (m) m.classList.add('hidden');
+  }
+  els.eggOk.addEventListener('click', closeEggModal);
+  els.eggModal.addEventListener('click', function (e) {
+    if (e.target === els.eggModal || e.target.classList.contains('egg-backdrop')) closeEggModal();
+  });
+
+  /* ---- 新音效（真香欢呼 / 救护车 / 玻璃碎 / 炸弹 / 灵感旋律） ---- */
+  function soundCheer() {
+    if (!soundOn) return;
+    soundDing();
+    [523, 659, 784, 1047].forEach(function (f, i) { setTimeout(function () { tone(f, 0.25, 'triangle', 0.09); }, 160 + i * 90); });
+  }
+  function soundSiren() {
+    if (!soundOn) return;
+    [880, 660, 880, 660, 880, 660].forEach(function (f, i) { setTimeout(function () { tone(f, 0.32, 'square', 0.06); }, i * 260); });
+  }
+  function soundGlass() {
+    if (!soundOn) return;
+    var ctx = ac(); if (!ctx) return;
+    var t0 = ctx.currentTime;
+    var len = Math.floor(ctx.sampleRate * 0.4);
+    var buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    var ch = buf.getChannelData(0);
+    for (var i = 0; i < len; i++) {
+      ch[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.6);
+    }
+    var src = ctx.createBufferSource(); src.buffer = buf;
+    var g = ctx.createGain(); g.gain.value = 0.08;
+    var filt = ctx.createBiquadFilter(); filt.type = 'highpass'; filt.frequency.value = 1800;
+    src.connect(filt); filt.connect(g); g.connect(ctx.destination);
+    src.start(t0);
+  }
+  function soundBoom() { tone(90, 0.5, 'sine', 0.3); tone(55, 0.6, 'triangle', 0.25, 0.02); }
+  function soundInspiration() {
+    [659, 784, 880, 1047, 880, 1047, 1319].forEach(function (f, i) { setTimeout(function () { tone(f, 0.2, 'sine', 0.08); }, i * 110); });
+  }
+  function soundCat() { [600, 900, 700, 500].forEach(function (f, i) { setTimeout(function () { tone(f, 0.12, 'triangle', 0.08); }, i * 70); }); }
+  function soundFlicker() { [180, 260, 160, 220].forEach(function (f, i) { setTimeout(function () { tone(f, 0.1, 'sawtooth', 0.04); }, i * 120); }); }
+
+  /* ---- 伪社交弹幕（本地假数据） ---- */
+  var DANMAKU_USERS = ['用户8848', '吃瓜群众', '深夜干饭人', '冰箱战神', '米其林在逃', '打工人', '干饭魂', '幸运锦鲤', '饿死鬼投胎', '厨房刺客', '隔壁老王', '减肥失败者'];
+  var DANMAKU_TEXTS = [
+    '刚刚用辣条做出了红烧肉，已进医院 🚑',
+    '成功复刻了仰望星空派 😱',
+    '用可乐炖了排骨，真香 😋',
+    '把剩米饭炒出了米其林的感觉 ✨',
+    '连吃三天同一道菜，这是爱吗 🥹',
+    '老干妈拌香蕉，我错了 🫠',
+    '冰箱见底，主厨说还能救 💪',
+    '把酸奶煮成了豆腐脑，味道居然还行',
+    '今天也要把冰箱吃空！',
+    'AI 让我把泡面煮进咖啡，我不信邪……',
+    '这道菜吃完，我感觉自己是实验品 🧪',
+    '主厨说我家的冰箱能开博物馆 🏛️'
+  ];
+  function startDanmaku() {
+    if (window.__danmakuStarted) return;
+    window.__danmakuStarted = true;
+    function spawn() {
+      var box = document.getElementById('danmaku');
+      if (!box) return;
+      var item = document.createElement('div');
+      item.className = 'danmaku-item';
+      var user = DANMAKU_USERS[Math.floor(Math.random() * DANMAKU_USERS.length)];
+      var text = DANMAKU_TEXTS[Math.floor(Math.random() * DANMAKU_TEXTS.length)];
+      item.textContent = user + '：' + text;
+      item.style.bottom = (Math.random() * 16) + 'px';
+      var dur = 7000 + Math.random() * 5000;
+      item.style.animationDuration = dur + 'ms';
+      box.appendChild(item);
+      while (box.children.length > 20) box.removeChild(box.firstChild);
+      setTimeout(function () { if (item.parentNode) item.parentNode.removeChild(item); }, dur + 300);
+    }
+    function loop() { spawn(); setTimeout(loop, 4000 + Math.random() * 2000); }
+    loop();
+  }
+
+  /* ---- 工具 ---- */
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+  function copyText(t) {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(t).catch(function () { fallbackCopy(t); });
+    } else fallbackCopy(t);
+  }
+  function fallbackCopy(t) {
+    var ta = document.createElement('textarea');
+    ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch (e) {}
+    document.body.removeChild(ta);
+  }
+
+﻿  /* ---- 双人盲盒对局 ---- */
+  var duel = {
+    roomId: '', code: '', nick: '', myUid: '', isHost: false, joinRoomId: '',
+    players: {}, exchange: {}, phase: '', winner: '', tie: false,
+    penaltyDouble: false, timeoutLoser: '', deadline: 0,
+    myRecipe: null, bomb: '', score: 50,
+    watcher: null, pollTimer: null, hbTimer: null, countTimer: null, swapTimer: null,
+    opened: false, submitting: false, penaltyChosen: false, swapDone: false
+  };
+
+  function openDuel() {
+    if (isDemo || !cloudApp) {
+      toast('双人对局需要连接云开发环境，请部署后在线上使用');
+      return;
+    }
+    duel.opened = true;
+    els.duelView.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+    renderDuel();
+  }
+  function closeDuel() {
+    duel.opened = false;
+    els.duelView.classList.add('hidden');
+    document.body.style.overflow = '';
+    stopDuelLoops();
+    duel.roomId = ''; duel.code = ''; duel.players = {}; duel.phase = '';
+    duel.myRecipe = null; duel.bomb = ''; duel.swapDone = false; duel.joinRoomId = '';
+    duel.winner = ''; duel.tie = false; duel.penaltyDouble = false; duel.timeoutLoser = '';
+  }
+
+  function stopDuelLoops() {
+    if (duel.watcher && duel.watcher.close) { try { duel.watcher.close(); } catch (e) {} }
+    duel.watcher = null;
+    if (duel.pollTimer) clearInterval(duel.pollTimer); duel.pollTimer = null;
+    if (duel.hbTimer) clearInterval(duel.hbTimer); duel.hbTimer = null;
+    if (duel.countTimer) clearInterval(duel.countTimer); duel.countTimer = null;
+    if (duel.swapTimer) clearTimeout(duel.swapTimer); duel.swapTimer = null;
+  }
+
+  function callDuel(data, ok, fail) {
+    if (!cloudApp) { toast('云环境不可用'); return; }
+    cloudApp.callFunction({ name: 'generateRecipe', data: data })
+      .then(function (res) {
+        var r = res && res.result ? res.result : {};
+        if (!r.success) throw new Error(r.error || '操作失败');
+      if (ok) ok(r.data);
+      })
+      .catch(function (err) {
+        var msg = (err && err.message) ? err.message : '对局操作失败';
+      if (fail) fail(msg); else toast(msg);
+      });
+  }
+
+  function renderDuel() {
+    if (!duel.opened) return;
+    var b = els.duelBody;
+    b.innerHTML = '';
+    if (!duel.roomId) { renderDuelHome(b); return; }
+    if (duel.phase === 'lobby') renderDuelLobby(b);
+    else if (duel.phase === 'swap') renderDuelSwap(b);
+    else if (duel.phase === 'cook') renderDuelCook(b);
+    else if (duel.phase === 'judge') renderDuelJudge(b);
+    else if (duel.phase === 'done') renderDuelDone(b);
+    else renderDuelHome(b);
+  }
+
+  function renderDuelHome(b) {
+    b.appendChild(el('p', 'duel-hint', '拉上一位好友，各自报出冰箱里的剩菜，交换一颗「炸弹食材」，同时出菜互相审判！'));
+    var nickRow = el('div', 'duel-nick-row');
+    var nickInput = el('input', 'duel-nick', null);
+    nickInput.type = 'text'; nickInput.maxLength = 12;
+    nickInput.placeholder = '你的昵称（默认玩家A）';
+    nickInput.value = duel.nick || '';
+    nickRow.appendChild(nickInput);
+    b.appendChild(nickRow);
+
+    if (duel.joinRoomId) {
+      var jh = el('p', 'duel-hint', '你收到了一份「双人对局」挑战！输入昵称后加入：');
+      b.appendChild(jh);
+      var jb = el('button', 'duel-primary', '⚔️ 接受挑战，加入对局');
+      jb.type = 'button';
+      jb.addEventListener('click', function () {
+        var nick = (nickInput.value || '').trim() || '玩家B';
+        callDuel({ action: 'joinDuel', nick: nick, roomId: duel.joinRoomId }, function (d) {
+          joinDuelSuccess(d, nick);
+        });
+      });
+      b.appendChild(jb);
+      var back = el('button', 'duel-ghost', '← 返回');
+      back.type = 'button';
+      back.style.marginTop = '10px';
+      back.addEventListener('click', function () { duel.joinRoomId = ''; renderDuelHome(b); });
+      b.appendChild(back);
+      return;
+    }
+
+    var createBtn = el('button', 'duel-primary', '创建房间，等好友加入');
+    createBtn.type = 'button';
+    createBtn.addEventListener('click', function () {
+      var nick = (nickInput.value || '').trim() || '玩家A';
+      callDuel({ action: 'createDuel', nick: nick }, function (d) {
+        duel.roomId = d.roomId; duel.code = d.code; duel.myUid = d.myUid; duel.isHost = true;
+        duel.nick = nick; duel.players = d.players || {}; duel.phase = d.phase || 'lobby';
+        duel.deadline = d.deadline || 0;
+        startDuelSync();
+        renderDuel();
+      });
+    });
+    b.appendChild(createBtn);
+
+    b.appendChild(el('p', 'duel-hint', '—— 或者 ——')).style.textAlign = 'center';
+
+    var joinRow = el('div', 'duel-nick-row');
+    var codeInput = el('input', 'duel-nick', null);
+    codeInput.type = 'text'; codeInput.maxLength = 6;
+    codeInput.placeholder = '6 位房间码';
+    joinRow.appendChild(codeInput);
+    b.appendChild(joinRow);
+
+    var joinBtn = el('button', 'duel-secondary', '用房间码加入');
+    joinBtn.type = 'button';
+    joinBtn.addEventListener('click', function () {
+      var nick = (nickInput.value || '').trim() || '玩家B';
+      var code = (codeInput.value || '').trim();
+      if (!/^\d{6}$/.test(code)) { toast('请输入 6 位数字房间码'); return; }
+      callDuel({ action: 'joinDuel', nick: nick, code: code }, function (d) {
+        joinDuelSuccess(d, nick);
+      });
+    });
+    b.appendChild(joinBtn);
+  }
+
+  function joinDuelSuccess(d, nick) {
+    duel.roomId = d.roomId; duel.code = d.code; duel.myUid = d.myUid; duel.isHost = false;
+    duel.nick = nick; duel.players = d.players || {}; duel.phase = d.phase || 'lobby';
+    duel.deadline = d.deadline || 0;
+    startDuelSync();
+    renderDuel();
+  }
+
+  function opponent() {
+    if (!duel.players) return null;
+    var us = Object.keys(duel.players);
+    for (var i = 0; i < us.length; i++) {
+      if (us[i] !== duel.myUid) return duel.players[us[i]];
+    }
+    return null;
+  }
+  function playerCard(p, isMe) {
+    var card = el('div', 'duel-player' + (isMe ? ' me' : '') + (p && p.online === false ? ' offline' : ''));
+    var name = el('div', 'dp-name', (p ? p.nick : '等待…') + (isMe ? '（你）' : ''));
+    var status = el('div', 'dp-status', statusText(p));
+    card.appendChild(name); card.appendChild(status);
+    if (p && (p.progress > 0 || p.cooked)) {
+      var bar = el('div', 'duel-progress');
+      var fill = document.createElement('i');
+      fill.style.width = (p.cooked ? 100 : (p.progress || 0)) + '%';
+      bar.appendChild(fill);
+      card.appendChild(bar);
+    }
+    return card;
+  }
+  function statusText(p) {
+    if (!p) return '未加入';
+    if (duel.phase === 'lobby') return p.ready ? '✅ 已就绪' : '⏳ 正在报食材…';
+    if (duel.phase === 'swap') return '💣 交换炸弹中…';
+    if (duel.phase === 'cook') return p.cooked ? '🍳 已出锅' : '🍳 烹饪中…';
+    if (duel.phase === 'judge') return p.score !== null ? '🗳️ 已评分' : '🗳️ 评分中…';
+    if (duel.phase === 'done') return p.score !== null ? '离谱分 ' + p.score : '';
+    return '';
+  }
+
+  function renderDuelLobby(b) {
+    var me = duel.players[duel.myUid];
+    var timer = el('div', 'duel-timer', '30'); timer.id = 'duelCount'; b.appendChild(timer);
+    var codeBox = el('div', 'duel-code-box');
+    codeBox.appendChild(el('p', 'duel-hint', '把房间码发给好友：'));
+    codeBox.appendChild(el('div', 'duel-code', duel.code || ''));
+    var link = location.origin + location.pathname + '?duel=' + encodeURIComponent(duel.roomId);
+    codeBox.appendChild(el('div', 'duel-link', '邀请链接：' + link));
+    var copyBtn = el('button', 'duel-ghost duel-copy-btn', '复制邀请链接');
+    copyBtn.type = 'button';
+    copyBtn.addEventListener('click', function () { copyText(link); toast('邀请链接已复制'); soundPop(); });
+    codeBox.appendChild(copyBtn);
+    b.appendChild(codeBox);
+
+    var playersRow = el('div', 'duel-players');
+    playersRow.appendChild(playerCard(me, true));
+    playersRow.appendChild(playerCard(opponent(), false));
+    b.appendChild(playersRow);
+
+    if (me && !me.ready) {
+      b.appendChild(el('p', 'duel-hint', '报出你冰箱里至少 3 样食材，双方就绪后自动交换炸弹！'));
+      var ta = document.createElement('textarea');
+      ta.className = 'duel-input'; ta.maxLength = 120; ta.rows = 2;
+      ta.value = duel.draft || '';
+      ta.placeholder = '例如：半个洋葱、两包泡面、一瓶可乐';
+      b.appendChild(ta);
+      ta.addEventListener('input', function () { duel.draft = ta.value; });
+      var readyBtn = el('button', 'duel-primary', '✅ 就绪，等待交换炸弹');
+      readyBtn.type = 'button';
+      readyBtn.addEventListener('click', function () {
+        var ings = (ta.value || '').trim();
+        if (ings.split(/[、,，;；]/).filter(Boolean).length < 3) { toast('至少输入 3 样食材'); return; }
+        duel.draft = '';
+        callDuel({ action: 'duelReady', roomId: duel.roomId, ingredients: ings }, function (d) { applyDuelData(d); });
+      });
+      b.appendChild(readyBtn);
+    } else {
+      b.appendChild(el('p', 'duel-hint', '已就绪，等待对方报食材…（30 秒倒计时）'));
+    }
+  }
+
+  function renderDuelSwap(b) {
+    if (duel.swapDone) { renderDuelCook(b); return; }
+    var sc = el('div', 'duel-swap-scene');
+    sc.appendChild(el('span', 'duel-bomb from-a', '💣'));
+    sc.appendChild(el('span', 'duel-bomb from-b', '🧨'));
+    sc.appendChild(el('span', 'duel-boom', '💥'));
+    b.appendChild(sc);
+    var lines = el('p', 'duel-swap-lines', '交换炸弹中…');
+    b.appendChild(lines);
+    var players = duel.players || {};
+    var us = Object.keys(players);
+    if (us.length === 2) {
+      var a = players[us[0]], bb = players[us[1]];
+      lines.textContent = a.nick + ' 的炸弹 → ' + bb.nick + '；' + bb.nick + ' 的炸弹 → ' + a.nick;
+    }
+    if (!duel.swapTimer) {
+      soundBoom();
+      duel.swapTimer = setTimeout(function () { duel.swapDone = true; renderDuel(); }, 3200);
+    }
+  }
+
+  function renderDuelCook(b) {
+    var me = duel.players[duel.myUid];
+    var opp = opponent();
+    var timer = el('div', 'duel-timer', '60'); timer.id = 'duelCount'; b.appendChild(timer);
+    var playersRow = el('div', 'duel-players');
+    playersRow.appendChild(playerCard(me, true));
+    playersRow.appendChild(playerCard(opp, false));
+    b.appendChild(playersRow);
+    b.appendChild(el('p', 'duel-hint', '你的食材：' + ((me && me.ingredients) || []).join('、') + (duel.bomb ? '　＋炸弹：' + duel.bomb : '')));
+    if (me && !me.cooked) {
+      var cookBtn = el('button', 'duel-primary', '🔥 开整！让 AI 出菜');
+      cookBtn.type = 'button';
+      cookBtn.addEventListener('click', duelCookNow);
+      b.appendChild(cookBtn);
+      b.appendChild(el('p', 'duel-hint', 'AI 正在爆炒你的剩菜 + 对方的炸弹，约 3~8 秒。双方出锅后一起揭晓！'));
+    } else {
+      b.appendChild(el('p', 'duel-hint', '你的菜已出锅（审判阶段揭晓），等待对方…'));
+    }
+  }
+
+  function duelCookNow() {
+    if (duel.submitting) return;
+    duel.submitting = true;
+    var btn = document.querySelector('#duelBody button.duel-primary');
+    if (btn) { btn.disabled = true; btn.textContent = '\u{1F372} AI \u7206\u7092\u4E2D\u2026'; }
+    callDuel({ action: 'duelCook', roomId: duel.roomId }, function (d) {
+      duel.submitting = false;
+      if (d.myRecipe) duel.myRecipe = d.myRecipe;
+      if (d.bomb) duel.bomb = d.bomb;
+      applyDuelData(d);
+    }, function () { duel.submitting = false; });
+  }
+
+  function recipeCard(p, label) {
+    var card = el('div', 'duel-r-card');
+    var r = p && p.recipe ? p.recipe : null;
+    card.appendChild(el('div', 'rc-name', r ? r.name : '还在锅里…'));
+    card.appendChild(el('div', 'rc-owner', p ? p.nick + '（' + label + '）' : label));
+    if (r) {
+      card.appendChild(el('div', 'rc-meta', '黑暗指数 ' + (r.darkScore != null ? r.darkScore : '?') + ' · ' + (r.plating || '')));
+      var ul = document.createElement('ul');
+      ul.className = 'rc-steps';
+      (r.steps || []).forEach(function (s) { var li = document.createElement('li'); li.textContent = s; ul.appendChild(li); });
+      card.appendChild(ul);
+      if (r.warning) card.appendChild(el('div', 'rc-warn', '⚠️ ' + r.warning));
+      if (r.event) card.appendChild(el('div', 'rc-warn', (r.event.emoji || '🎲') + ' 随机事件：' + (r.event.name || '')));
+    }
+    return card;
+  }
+
+  function renderDuelJudge(b) {
+    var me = duel.players[duel.myUid];
+    var opp = opponent();
+    var timer = el('div', 'duel-timer', '60'); timer.id = 'duelCount'; b.appendChild(timer);
+    var judge = el('div', 'duel-judge');
+    judge.appendChild(recipeCard(opp, '对手'));
+    judge.appendChild(recipeCard(me, '你'));
+    b.appendChild(judge);
+
+    if (me && me.score === null && opp && opp.recipe) {
+      var vb = el('div', 'duel-vote-box');
+      vb.appendChild(el('p', 'duel-hint', '给对手的菜打离谱分（0-100），谁被对方打的分更高谁赢！'));
+      var row = el('div', 'duel-vote-row');
+      var range = document.createElement('input');
+      range.type = 'range'; range.min = 0; range.max = 100; range.value = 50;
+      range.className = 'duel-vote-range';
+      var num = el('span', 'duel-vote-num', '50');
+      range.addEventListener('input', function () { num.textContent = range.value; duel.score = Number(range.value); });
+      row.appendChild(range); row.appendChild(num);
+      vb.appendChild(row);
+      var voteBtn = el('button', 'duel-primary', '🗳️ 投出离谱分');
+      voteBtn.type = 'button';
+      voteBtn.addEventListener('click', function () {
+        callDuel({ action: 'duelVote', roomId: duel.roomId, score: duel.score }, function (d) { applyDuelData(d); });
+      });
+      vb.appendChild(voteBtn);
+      b.appendChild(vb);
+    } else if (me && me.score !== null) {
+      b.appendChild(el('p', 'duel-hint', '已评分，等待对手投票…'));
+    } else if (me && me.score === null && !(opp && opp.recipe)) {
+      b.appendChild(el('p', 'duel-hint', '对方还在炒菜…'));
+    }
+  }
+
+  function scoreCard(p, isMe) {
+    var card = el('div', 'duel-player' + (isMe ? ' me' : ''));
+    card.appendChild(el('div', 'dp-name', p.nick + (isMe ? '（你）' : '')));
+    card.appendChild(el('div', 'dp-status', '离谱分：' + (p.score != null ? p.score : '-')));
+    return card;
+  }
+  function randomAvatarEmoji() { var l = ['😹', '🤡', '🐷', '🦆', '🐸', '🫠', '😵‍💫']; return l[Math.floor(Math.random() * l.length)]; }
+  function winnerIngredient() {
+    var w = duel.winner ? duel.players[duel.winner] : null;
+    if (w && w.ingredients && w.ingredients.length) return w.ingredients[0];
+    if (duel.bomb) return duel.bomb;
+    return '';
+  }
+  function penaltyPanel(winnerNick) {
+    var box = el('div', 'duel-penalty');
+    box.appendChild(el('div', 'pn-title', '😵 惩罚时间' + (duel.penaltyDouble ? '（惩罚翻倍！）' : '') + '——输给 ' + winnerNick + '，选一个执行：'));
+    var opp = opponent();
+    var dish = opp && opp.recipe ? '「' + opp.recipe.name + '」' : '（神秘料理）';
+    var opts = [
+      { emoji: '📱', text: '发一条指定文案的朋友圈/动态', value: '我在「冰箱剩菜盲盒」双人对局中输给了 ' + winnerNick + '，按约定公开处刑：这道菜' + dish + '，你敢挑战吗？' },
+      { emoji: '😅', text: '把头像换成赢家指定的表情包，保持 1 小时', value: '惩罚：我把头像换成了 ' + randomAvatarEmoji() + ' 一小时（赢家 ' + winnerNick + ' 指定）。' },
+      { emoji: '🥬', text: '下一局必须用赢家指定的一种食材开局', value: '惩罚：下一局开局食材必须带上「' + (winnerIngredient() || '神秘食材') + '」（赢家 ' + winnerNick + ' 指定）。' }
+    ];
+    opts.forEach(function (o) {
+      var opt = el('div', 'pn-opt');
+      opt.tabIndex = 0; opt.setAttribute('role', 'button');
+      opt.appendChild(el('span', 'pn-emoji', o.emoji));
+      opt.appendChild(el('span', 'pn-text', o.text));
+      opt.appendChild(el('span', 'pn-copy', '复制文案'));
+      opt.addEventListener('click', function () {
+        copyText(o.value);
+        duel.penaltyChosen = true;
+        toast('已复制，记得真的执行哦 😈');
+        soundPop();
+      });
+      opt.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); opt.click(); } });
+      box.appendChild(opt);
+    });
+    return box;
+  }
+
+  function renderDuelDone(b) {
+    var me = duel.players[duel.myUid];
+    var opp = opponent();
+    var winner = duel.winner ? duel.players[duel.winner] : null;
+    var wrap = el('div', 'duel-settle');
+    var banner = el('div', 'duel-winner-banner' + (duel.tie ? ' tie' : ''));
+    if (duel.tie) {
+      banner.textContent = duel.timeoutLoser === 'both' ? '⏰ 双方超时，双双判负，惩罚翻倍！' : '🤝 平局！谁也没输，谁也没赢';
+    } else if (winner) {
+      var isMe = me && winner.nick === me.nick;
+      banner.textContent = isMe ? '🎉 你赢了！' : '💀 ' + (winner.nick || '对手') + ' 赢了！';
+    }
+    wrap.appendChild(banner);
+
+    var playersRow = el('div', 'duel-players');
+    if (me) playersRow.appendChild(scoreCard(me, true));
+    if (opp) playersRow.appendChild(scoreCard(opp, false));
+    wrap.appendChild(playersRow);
+
+    var iLost = me && duel.winner && winner && me.nick !== winner.nick && !duel.tie;
+    if (iLost && winner) wrap.appendChild(penaltyPanel(winner.nick || '对手'));
+
+    var actions = el('div', 'duel-actions');
+    var again = el('button', 'duel-primary', '⚔️ 再来一局');
+    again.type = 'button';
+    again.addEventListener('click', function () {
+      callDuel({ action: 'duelRematch', roomId: duel.roomId }, function (d) {
+        duel.myRecipe = null; duel.bomb = ''; duel.swapDone = false; duel.penaltyChosen = false;
+        applyDuelData(d);
+      });
+    });
+    actions.appendChild(again);
+    var exit = el('button', 'duel-secondary', '退出对局');
+    exit.type = 'button';
+    exit.addEventListener('click', closeDuel);
+    actions.appendChild(exit);
+    wrap.appendChild(actions);
+    b.appendChild(wrap);
+  }
+
+  function startDuelSync() {
+    stopDuelLoops();
+    var started = false;
+    try {
+      var db = cloudApp.database();
+      var doc = db.collection('rooms').doc(duel.roomId);
+      if (doc && typeof doc.watch === 'function') {
+        duel.watcher = doc.watch({
+          onChange: function (snapshot) { applyDuelSnapshot(snapshot); },
+          onError: function (err) { console.warn('duel watch error:', err); startDuelPoll(); }
+        });
+        started = true;
+      }
+    } catch (e) { console.warn('duel watch init failed:', e); }
+    if (!started) startDuelPoll();
+    duel.hbTimer = setInterval(function () {
+      callDuel({ action: 'duelHeartbeat', roomId: duel.roomId }, function () {});
+    }, 10000);
+    startDuelCountdown();
+  }
+
+  function startDuelPoll() {
+    if (duel.pollTimer) return;
+    duel.pollTimer = setInterval(function () {
+      callDuel({ action: 'duelGet', roomId: duel.roomId }, function (d) { applyDuelData(d); });
+    }, 1500);
+  }
+
+  function applyDuelSnapshot(snapshot) {
+    var doc = null;
+    var list = null;
+    if (snapshot) {
+      if (snapshot.docs && snapshot.docs.length) list = snapshot.docs;
+      else if (snapshot.docChanges && snapshot.docChanges.length) list = snapshot.docChanges.map(function (ch) { return ch.doc; });
+    }
+    if (!list || !list.length) return;
+    var first = list[0];
+    doc = (first && first.data && typeof first.data === 'object') ? first.data
+      : (first && first._data && typeof first._data === 'object') ? first._data
+      : first;
+    if (!doc || !doc.phase) return;
+    applyDuelData(normalizeDuel(doc));
+  }
+
+  function normalizeDuel(d) {
+    if (!d) return null;
+    return {
+      roomId: d.roomId || duel.roomId, code: d.code || '', phase: d.phase || '',
+      players: d.players || {}, exchange: d.exchange || {}, winner: d.winner || '',
+      tie: !!d.tie, penaltyDouble: !!d.penaltyDouble, timeoutLoser: d.timeoutLoser || '',
+      deadline: d.deadline || 0, myUid: duel.myUid
+    };
+  }
+
+  function applyDuelData(d) {
+    if (!d) return;
+    var prevPhase = duel.phase;
+    duel.roomId = d.roomId || duel.roomId;
+    duel.code = d.code || duel.code;
+    duel.players = d.players || duel.players;
+    duel.exchange = d.exchange || {};
+    duel.winner = d.winner || '';
+    duel.tie = !!d.tie;
+    duel.penaltyDouble = !!d.penaltyDouble;
+    duel.timeoutLoser = d.timeoutLoser || '';
+    duel.deadline = d.deadline || 0;
+    duel.phase = d.phase || duel.phase;
+    if (prevPhase !== duel.phase) {
+      if (duel.phase === 'swap') runSwapScene();
+      if (duel.phase === 'judge') soundDing();
+      if (duel.phase === 'done') onDuelSettled();
+      startDuelCountdown();
+    }
+    renderDuel();
+  }
+
+  function runSwapScene() {
+    if (duel.swapTimer) clearTimeout(duel.swapTimer);
+    duel.swapTimer = setTimeout(function () { duel.swapDone = true; renderDuel(); }, 3200);
+  }
+
+  function startDuelCountdown() {
+    if (duel.countTimer) clearInterval(duel.countTimer);
+    duel.countTimer = setInterval(function () {
+      if (!duel.roomId || duel.phase === '' || duel.phase === 'done') return;
+      if (!duel.deadline) {
+        var secEl0 = document.getElementById('duelCount');
+        if (secEl0) secEl0.textContent = '--';
+        return;
+      }
+      var remain = Math.max(0, (duel.deadline || 0) - Date.now());
+      var secEl = document.getElementById('duelCount');
+      if (secEl) {
+        var sec = Math.ceil(remain / 1000);
+        secEl.textContent = sec;
+        secEl.classList.toggle('warn', sec <= 10);
+      }
+      if (remain <= 0) {
+        clearInterval(duel.countTimer);
+        handleDuelTimeout();
+      }
+    }, 500);
+  }
+
+  function handleDuelTimeout() {
+    var me = duel.players[duel.myUid];
+    if (!me) return;
+    if (Object.keys(duel.players || {}).length < 2) return; // waiting for opponent
+    if (duel.phase === 'swap') return; // 交换阶段超时交给服务器 tick 判定（心跳兜底）
+    if (duel.submitting && duel.phase === 'cook') return; // AI in-flight: do not self-penalize
+    var pending = (duel.phase === 'lobby' && !me.ready) ||
+                  (duel.phase === 'cook' && !me.cooked) ||
+                  (duel.phase === 'judge' && me.score === null);
+    if (pending) {
+      toast('⏰ 超时判负，惩罚翻倍！');
+      callDuel({ action: 'duelTimeout', roomId: duel.roomId }, function (d) { applyDuelData(d); });
+    }
+  }
+
+  function onDuelSettled() {
+    if (duel.winner) soundCheer(); else soundDing();
+  }
+
+  /* 邀请链接自动加入 */
+  function initDuelLink() {
+    var dq = getQuery('duel');
+    if (!dq) return;
+    if (isDemo || !cloudApp) { toast('双人对局需要连接云开发环境'); return; }
+    duel.joinRoomId = dq;
+    openDuel();
+  }
+
+  els.duelBtn.addEventListener('click', openDuel);
+  els.duelClose.addEventListener('click', closeDuel);
+  els.duelView.addEventListener('click', function (e) {
+    if (e.target === els.duelView || e.target.classList.contains('duel-backdrop')) closeDuel();
   });
 })();

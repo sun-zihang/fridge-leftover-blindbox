@@ -1,4 +1,4 @@
-// 云函数：generateRecipe
+﻿// 云函数：generateRecipe
 // 功能：AI 生成创意菜谱（严格 JSON 输出并校验）+ 游戏化系统：
 //       - players：生存挑战（每日打卡 / 连续天数 / 生存积分 / 徽章）
 //       - styles：风格模板（积分解锁奇葩 Prompt）
@@ -11,8 +11,10 @@ const tcb = require('@cloudbase/node-sdk');
 const {
   fallbackRecipe, normalFallbackRecipe, extractJson, normalizeRecipe,
   STYLES, STYLE_PROMPTS, guessTag, calcPoints,
-  heuristicDarkScore, darkTier, findDangerWarnings, dailyChallenge, parseIngredients
+  heuristicDarkScore, darkTier, findDangerWarnings, dailyChallenge, parseIngredients,
+  maybeEvent, applyEventToRecipe, EX_RECIPE
 } = require('./recipe');
+const D = require('./duel');
 const NR = require('./normalRecipes');
 
 const app = tcb.init({ env: tcb.SYMBOL_CURRENT_ENV });
@@ -195,11 +197,21 @@ function stylesView(p) {
 // ---------- AI 生成 ----------
 
 async function generate(ingredients, style, mode, persona) {
+  // 彩蛋：输入含「前任/礼物」→ 断舍离爆炒苦瓜
+  if (/前任|礼物/.test(String(ingredients || ''))) {
+    var ex = decorate(Object.assign({}, EX_RECIPE), ingredients, mode, false, false, '');
+    ex.recipe.easterEgg = true;
+    return ex;
+  }
+  // 随机事件：10% 触发「厨房突发事件」（normal 只允许灵感爆发）
+  var evt = maybeEvent(null, mode);
   // 正常家常模式：优先从内置菜谱库（206 道家常菜）按食材匹配，命中直接返回（含详细菜单字段）
   if (mode === 'normal') {
     const hit = NR.matchNormalRecipe(ingredients);
     if (hit) {
-      return { recipe: NR.toAppRecipe(hit), fallback: false, fromLib: true, lastError: '' };
+      var libR = NR.toAppRecipe(hit);
+      if (evt && evt.id === 'inspiration') libR.event = evt;
+      return { recipe: libR, fallback: false, fromLib: true, lastError: '' };
     }
   }
   const model = ai.createModel('cloudbase');
@@ -222,6 +234,12 @@ async function generate(ingredients, style, mode, persona) {
       if (personaPrompt) {
         messages.push({ role: 'user', content: '人设要求：' + personaPrompt });
       }
+      if (evt) {
+        var evtPrompt = '';
+        if (evt.id === 'power_off') evtPrompt = evt.prompt;
+        else if (evt.id === 'cat_spice') evtPrompt = evt.prompt + '额外强制加入' + evt.spice + '。';
+        if (evtPrompt) messages.push({ role: 'user', content: '突发事件：' + evtPrompt });
+      }
       if (i > 0) {
         messages.push({
           role: 'user',
@@ -238,11 +256,15 @@ async function generate(ingredients, style, mode, persona) {
   }
 
   if (!recipe) {
-    const fb = mode === 'normal'
+    var fb = mode === 'normal'
       ? normalFallbackRecipe(ingredients)
       : fallbackRecipe();
-    return decorate(fb, ingredients, mode, true, mode === 'normal', lastError);
+    if (evt) fb = applyEventToRecipe(fb, evt);
+    var deco = decorate(fb, ingredients, mode, true, mode === 'normal', lastError);
+    if (evt) deco.recipe.event = evt;
+    return deco;
   }
+  if (evt) recipe.event = evt;
   return decorate(recipe, ingredients, mode, false, false, lastError);
 }
 
@@ -354,7 +376,8 @@ exports.main = async (rawEvent) => {
     await Promise.all([
       ensureCollection('recipes'),
       ensureCollection('players'),
-      ensureCollection('challenges')
+      ensureCollection('challenges'),
+      ensureCollection('rooms')
     ]);
 
     // 评价：更新评分 + 玩家积分/徽章
@@ -533,6 +556,149 @@ exports.main = async (rawEvent) => {
           player: playerView(pa)
         }
       };
+    }
+
+    // ===== 双人盲盒对局 =====
+    function roomStateOf(raw) {
+      const list = Array.isArray(raw) ? raw : (raw ? [raw] : []);
+      const first = list.length ? wrap(list[0]) : null;
+      return first;
+    }
+    async function getRoom(roomId) {
+      if (!roomId) return null;
+      const res = await db.collection('rooms').doc(roomId).get();
+      return roomStateOf(res.data);
+    }
+    async function saveRoom(room) {
+      await db.collection('rooms').doc(room.roomId).set({ data: room });
+    }
+    function duelView(room, myUid) {
+      return {
+        roomId: room.roomId, code: room.code, phase: room.phase,
+        players: room.players, exchange: room.exchange,
+        winner: room.winner, tie: room.tie, penaltyDouble: room.penaltyDouble,
+        timeoutLoser: room.timeoutLoser, deadline: room.deadline, myUid: myUid
+      };
+    }
+
+    if (action === 'createDuel') {
+      const nick = String(event.nick || '玩家A').slice(0, 12);
+      const code = String(Math.floor(100000 + Math.random() * 900000));
+      const st = D.createState('', code, uid, nick, Date.now());
+      const addRes = await db.collection('rooms').add({ data: st });
+      st.roomId = addRes.id || addRes._id || '';
+      await db.collection('rooms').doc(st.roomId).update({ data: { roomId: st.roomId } });
+      return { success: true, data: duelView(st, uid) };
+    }
+
+    if (action === 'joinDuel') {
+      const nick = String(event.nick || '玩家B').slice(0, 12);
+      const roomId = String(event.roomId || '');
+      const code = String(event.code || '');
+      let room = null;
+      if (roomId) room = await getRoom(roomId);
+      else if (code) {
+        const res = await db.collection('rooms').where({ code: code }).limit(1).get();
+        room = roomStateOf(res.data);
+      }
+      if (!room) return { success: false, error: '房间不存在，请检查房间码' };
+      if (room.players && room.players[uid]) {
+        if (nick) room.players[uid].nick = nick;
+        await saveRoom(room);
+        return { success: true, data: duelView(room, uid) };
+      }
+      const rj = D.join(room, uid, nick, Date.now());
+      if (!rj.success) return { success: false, error: rj.error };
+      await saveRoom(room);
+      return { success: true, data: duelView(room, uid) };
+    }
+
+    if (action === 'duelReady') {
+      const room = await getRoom(String(event.roomId || ''));
+      if (!room) return { success: false, error: '房间不存在' };
+      D.tick(room, Date.now());
+      const rr = D.ready(room, uid, event.ingredients, Date.now());
+      if (!rr.success) return { success: false, error: rr.error };
+      await saveRoom(room);
+      return { success: true, data: duelView(room, uid) };
+    }
+
+    if (action === 'duelSwap') {
+      const room = await getRoom(String(event.roomId || ''));
+      if (!room) return { success: false, error: '房间不存在' };
+      const rs = D.swap(room, uid, Date.now());
+      if (!rs.success) return { success: false, error: rs.error };
+      await saveRoom(room);
+      return { success: true, data: duelView(room, uid) };
+    }
+
+    if (action === 'duelCook') {
+      const room = await getRoom(String(event.roomId || ''));
+      if (!room) return { success: false, error: '房间不存在' };
+      D.tick(room, Date.now());
+      // 点「开整」才算开始烹饪：给该玩家一个完整的 60s 烹饪窗口
+      if (room.phase === 'swap' || room.phase === 'cook') {
+        room.deadline = Math.max(room.deadline || 0, Date.now() + D.COOK_SECONDS * 1000);
+      }
+      const p = room.players[uid];
+      if (!p) return { success: false, error: '你不在这个房间' };
+      const firstUid = Object.keys(room.players)[0];
+      const bomb = uid === firstUid ? (room.exchange.BtoA || '') : (room.exchange.AtoB || '');
+      const list = (p.ingredients || []).slice();
+      if (bomb && list.indexOf(bomb) < 0) list.push(bomb);
+      const generated = await generate(list.join('、'), STYLES[0], 'weird', 'youmo');
+      const rc = D.cook(room, uid, generated.recipe, Date.now());
+      if (!rc.success) return { success: false, error: rc.error };
+      await saveRoom(room);
+      return { success: true, data: Object.assign(duelView(room, uid), { myRecipe: generated.recipe, bomb: bomb }) };
+    }
+
+    if (action === 'duelVote') {
+      const room = await getRoom(String(event.roomId || ''));
+      if (!room) return { success: false, error: '房间不存在' };
+      D.tick(room, Date.now());
+      const rv = D.vote(room, uid, Number(event.score), Date.now());
+      if (!rv.success) return { success: false, error: rv.error };
+      await saveRoom(room);
+      return { success: true, data: duelView(room, uid) };
+    }
+
+    if (action === 'duelTimeout') {
+      const room = await getRoom(String(event.roomId || ''));
+      if (!room) return { success: false, error: '房间不存在' };
+      const rt = D.timeout(room, uid, Date.now());
+      if (!rt.success) return { success: false, error: rt.error };
+      await saveRoom(room);
+      return { success: true, data: duelView(room, uid) };
+    }
+
+    if (action === 'duelHeartbeat') {
+      const room = await getRoom(String(event.roomId || ''));
+      if (!room) return { success: false, error: '房间不存在' };
+      D.tick(room, Date.now());
+      const rh = D.heartbeat(room, uid, Date.now());
+      if (!rh.success) return { success: false, error: rh.error };
+      await saveRoom(room);
+      return { success: true, data: duelView(room, uid) };
+    }
+
+    if (action === 'duelGet') {
+      const room = await getRoom(String(event.roomId || ''));
+      if (!room) return { success: false, error: '房间不存在' };
+      const before = room.phase + '|' + (room.winner || '') + '|' + (room.tie ? '1' : '0');
+      D.tick(room, Date.now());
+      const after = room.phase + '|' + (room.winner || '') + '|' + (room.tie ? '1' : '0');
+      if (before !== after) await saveRoom(room);
+      return { success: true, data: duelView(room, uid) };
+    }
+
+    if (action === 'duelRematch') {
+      const room = await getRoom(String(event.roomId || ''));
+      if (!room) return { success: false, error: '房间不存在' };
+      const rr = D.rematch(room, Date.now());
+      if (!rr.success) return { success: false, error: rr.error };
+      await saveRoom(room);
+      return { success: true, data: duelView(room, uid) };
     }
 
     // 默认动作：generate（生成菜谱 + 生存挑战打卡/积分）

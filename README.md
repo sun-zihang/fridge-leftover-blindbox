@@ -19,12 +19,18 @@
 - 📖 **内置 206 道家常菜谱库**：正常家常模式按食材匹配出菜，AI 失败时兜底。
 - 🧾 **详细菜单制作界面**：食材清单 / 备菜准备 / 分步做法 / 预计用时 / 主厨小贴士。
 - 🛡️ **免责声明**：底部食品免责提示，娱乐向内容不构成饮食建议。
+- ⚔️ **双人盲盒对局**：创建/加入房间（6 位房间码 + 邀请链接），双方各报 3 样以上食材 → 自动交换一颗「炸弹食材」→ 同时让 AI 出菜 → 审判阶段双菜并排揭晓、互打「离谱分」，分高者赢；输家三选一惩罚（发朋友圈文案 / 换头像 1 小时 / 下局用指定食材），可「再来一局」。
+- 🎲 **厨房随机事件**：每次生成有 10% 概率触发「停电了 / 猫打翻调料 / 灵感爆发」，事件横幅 + 专属音效 + 菜谱随之变化。
+- 🥚 **隐藏彩蛋**：连续 3 次「鸡蛋+番茄」主厨直接拒单；输入「前任/礼物」触发「断舍离爆炒苦瓜」；输入框占位符贱萌文案轮换。
+- 💬 **伪社交弹幕**：页面底部实时滚动「用户8848 刚用辣条做出红烧肉…」，热闹氛围拉满。
+- 🔊 **音效升级**：真香 → 清脆「叮」+欢呼琶音；已进医院 → 救护车双音鸣笛 + 玻璃碎；随机事件各有专属合成音效。
 ## 🧱 技术架构
 - 前端：原生 HTML + CSS + JS（零构建、零依赖），CloudBase JS SDK 走 CDN。
 - 后端：腾讯云开发 CloudBase（Serverless 云函数 + 静态网站托管 + 云数据库）。
 - AI：云函数 `generateRecipe` 内通过 `@cloudbase/node-sdk` 的 `app.ai()` 调用托管大模型（默认 `hy3` 腾讯混元，内置免费国产 AI，体验版可直接启用；备选 `qwen3.5-flash` 通义千问）。
 - 菜谱库：`normalRecipes.js`（UMD）三端共用——云函数 normal 模式匹配/兜底、网页与小程序的演示模式均从此库出菜。
 
+- 对局状态机：`duel.js`（纯逻辑、可单测）——lobby→swap→cook→judge→done 五阶段，懒超时判负、心跳断线检测、平票平局、再来一局；`rooms` 集合存房间状态，网页端 watch 只读，写入全走云函数。
 ## 📁 项目结构
 ```
 ├── web/                        # 网页版前端（部署到静态托管）
@@ -36,9 +42,11 @@
 │   └── generateRecipe/         # AI 生成菜谱云函数（generate+persona/synth / rate / listRank / dailyChallenge / vote / recognizeImage）
 │       ├── index.js
 │       ├── recipe.js           # 纯逻辑（JSON 提取/校验/兜底），可本地单测
+│       ├── duel.js             # 双人对局纯状态机（lobby/swap/cook/judge/done）
 │       ├── config.json
 │       ├── package.json
 │       └── test/recipe.test.js # 单元测试（node --test）
+│       └── test/duel.test.js   # 对局状态机单测
 └── PRD.md                      # 产品需求文档
 ```
 
@@ -75,8 +83,15 @@ var CLOUD_REGION = 'ap-shanghai';   // 环境地域（与云函数一致）
 2. 云开发控制台 → 环境 → 安全配置 → **Web 安全域名**，加入你的访问域名（如 `https://<envId>.tcloudbaseapp.com`；本地调试可先不校验）。
 
 ### 6. 数据库
-首次调用生成后会自动创建 `recipes` 集合（云函数以管理员身份写入，不受安全规则限制）。红黑榜读取同一集合中「真香 / 已进医院」的评价记录。
+首次调用生成后会自动创建 `recipes` / `players` / `challenges` / `rooms` 集合（云函数以管理员身份写入，不受安全规则限制）。红黑榜读取 `recipes` 中「真香 / 已进医院」的评价记录。`rooms` 集合用于双人对局：网页端通过实时 watch **只读**房间状态，需将权限设为「所有用户可读，仅管理端可写」（ADMINWRITE），写入全部由云函数管理员完成。
 
+
+### 7. 双人盲盒对局
+1. **部署**：按第 3 步部署最新云函数（含 `duel.js` 与 `createDuel/joinDuel/duelReady/duelSwap/duelCook/duelVote/duelTimeout/duelHeartbeat/duelGet/duelRematch` 等 action）。
+2. **rooms 集合**：云开发控制台 → 数据库 → 新建集合 `rooms`（云函数首次创建房间时也会自动创建）。
+3. **权限**：数据库 → `rooms` → 权限设置 → 选择「所有用户可读，仅管理端可写」（ADMINWRITE）。网页端只读 watch，写入全走云函数。
+4. **玩法**：点「⚔️ 双人盲盒对局」→ 创建房间，把 6 位房间码或邀请链接发给好友 → 双方各报 ≥3 样食材并「就绪」→ 自动交换炸弹（3 秒动画 + 音效）→ 双方点「开整」让 AI 出菜（60 秒倒计时，对方进度可见、内容隐藏）→ 审判阶段双菜并排揭晓、互打 0-100 离谱分 → 分高者赢；输家三选一惩罚（复制文案自行执行）；平票无人受罚；可「再来一局」。
+5. **规则**：输入 30 秒 / 烹饪 60 秒 / 评分 60 秒，任一超时判负且惩罚翻倍；对手超过 40 秒无心跳判掉线；房主单独等待好友时不判负，好友加入后才开始 30 秒倒计时。
 ## 🌐 部署到云开发静态托管
 
 **方式 A：控制台**（最简单）
@@ -97,12 +112,13 @@ tcb hosting deploy ./web --env-id <envId> --yes
 2. 配置环境 ID + 部署云函数 + 启用模型后：真实生成 → 评价「真香 / 已进医院」。
 3. 刷新页面，确认底部「黑暗料理红黑榜」出现刚评价的菜且标签正确（空数据时显示演示榜）。
 4. 生成海报 → 下载 / 系统分享。
+5. 双人对局：创建房间 → 好友通过邀请链接加入 → 双方就绪 → 交换炸弹动画 → 双方「开整」出菜 → 审判阶段互打离谱分 → 结算（赢家横幅 + 输家三选一惩罚）→ 再来一局；任一环节超时会触发「超时判负 + 惩罚翻倍」。
 
 ## 🧪 本地自动化检查
 ```bash
 node --check web/app.js
 node --check cloudfunctions/generateRecipe/index.js
-node --test "cloudfunctions/generateRecipe/test/*.test.js"
+node --test cloudfunctions/generateRecipe/test/recipe.test.js cloudfunctions/generateRecipe/test/duel.test.js cloudfunctions/generateRecipe/test/normalRecipes.test.js
 ```
 
 ## 🧪 微信小程序版（可选）

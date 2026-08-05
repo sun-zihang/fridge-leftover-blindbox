@@ -83,6 +83,7 @@
     </div>
     <button id="genBtn" class="generate-btn" type="button">召唤主厨 👨‍🍳</button>
 
+    <button id="duelBtn" class="duel-btn" type="button">⚔️ 双人盲盒对局 · 好友互炸</button>
     <section id="dailyCard" class="daily-card hidden">
       <div class="daily-head">
         <span class="daily-emoji">🍽️</span>
@@ -144,6 +145,7 @@
 
     <div id="result" class="result hidden">
       <h2 id="dishName" class="dish-name neon-pink"></h2>
+      <div id="eventBanner" class="event-banner hidden"></div>
       <div id="chefResult" class="chef-avatar chef-result">👨‍🍳</div>
       <p id="dishIngredients" class="dish-ingredients"></p>
 
@@ -215,6 +217,8 @@
       <div id="rankList" class="rank-scroll"></div>
     </section>
 
+    <div id="danmaku" class="danmaku" aria-hidden="true"></div>
+
     <footer class="footer">
     Powered by 腾讯云开发 CloudBase · AI 深夜食堂
     <br>
@@ -266,6 +270,27 @@
         <span class="buy-p-emoji">🛒</span><span class="buy-p-name">京东到家</span><span class="buy-p-arrow">›</span>
       </a>
       <p class="buy-modal-tip">小提示：别忘了带上前面的「主厨采购清单」哦～</p>
+    </div>
+  </div>
+
+  <div id="duelView" class="duel-view hidden">
+    <div class="duel-backdrop"></div>
+    <div class="duel-card">
+      <div class="duel-head">
+        <b class="duel-title">⚔️ 双人盲盒对局</b>
+        <button id="duelClose" class="duel-close" type="button" aria-label="关闭">×</button>
+      </div>
+      <div id="duelBody" class="duel-body"></div>
+    </div>
+  </div>
+
+  <div id="eggModal" class="egg-modal hidden">
+    <div class="egg-backdrop"></div>
+    <div class="egg-card">
+      <div class="egg-emoji">🙅‍♂️</div>
+      <b class="egg-title">主厨拒绝了你的点单</b>
+      <p class="egg-text">「鸡蛋番茄？吃腻了，换个花样！」连续 3 次同样的菜，主厨也会烦。去冰箱翻点别的吧。</p>
+      <button id="eggOk" class="egg-ok" type="button">知道了，去翻冰箱</button>
     </div>
   </div>
 

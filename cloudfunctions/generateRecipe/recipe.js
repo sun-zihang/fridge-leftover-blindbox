@@ -257,8 +257,68 @@ function parseIngredients(text) {
 }
 
 
+
+// ===== 随机事件（10% 触发「厨房突发事件」） =====
+const RANDOM_EVENTS = [
+  { id: 'power_off', name: '停电了', emoji: '🕯️', line: '主厨被迫盲做：纯靠嗅觉来一道凉拌菜！',
+    prompt: '这顿饭突然停电了！不能开火，只能做凉拌/冷食，菜名和做法都要体现"黑暗中盲做、全靠嗅觉"。' },
+  { id: 'cat_spice', name: '猫打翻了调料', emoji: '🐱', line: '猫主子打翻了调料罐，强制加入一味神秘香料！',
+    prompt: '猫打翻了调料罐，这顿饭被迫加入神秘香料，越怪越好。' },
+  { id: 'inspiration', name: '灵感爆发', emoji: '✨', line: '主厨灵光乍现，这道菜自带 BGM！', prompt: '' }
+];
+const SPICES = ['芥末', '花椒', '肉桂', '老干妈', '五香粉', '孜然'];
+
+// mode='normal' 只允许灵感爆发（家常模式保持靠谱），weird 全事件
+function maybeEvent(rng, mode) {
+  const rand = rng || Math.random;
+  if (rand() >= 0.1) return null;
+  const pool = mode === 'normal'
+    ? RANDOM_EVENTS.filter(function (e) { return e.id === 'inspiration'; })
+    : RANDOM_EVENTS;
+  if (!pool.length) return null;
+  const evt = pool[Math.floor(rand() * pool.length)];
+  const out = { id: evt.id, name: evt.name, emoji: evt.emoji, line: evt.line };
+  if (evt.id === 'cat_spice') out.spice = SPICES[Math.floor(rand() * SPICES.length)];
+  return out;
+}
+
+// 彩蛋：输入含「前任/礼物」→ 断舍离爆炒苦瓜
+const EX_RECIPE = {
+  name: '断舍离爆炒苦瓜',
+  steps: [
+    '把苦瓜对半剖开，去瓤切片，就像清空和前任有关的缓存。',
+    '猛火爆炒，撒一把干辣椒，让眼泪和苦味一起断舍离。',
+    '装盘前把锅铲往桌上一拍：旧的不去，新的不来。'
+  ],
+  plating: '用纯白盘子盛出，苦瓜摆成"再见"两个字。',
+  warning: '感情债还不上，但苦瓜的苦，今晚必须咽下去。',
+  darkScore: 55,
+  easterEgg: 'ex'
+};
+
+// 兜底菜谱应用事件变换（AI 菜谱由 prompt 直接生成，此处只处理 fallback/库里菜）
+function applyEventToRecipe(recipe, evt) {
+  if (!evt) return recipe;
+  var r = Object.assign({}, recipe);
+  if (evt.id === 'power_off') {
+    r.name = (r.name || '盲盒菜') + '·盲拌版';
+    r.steps = [
+      '把所有食材洗净切丝，全程不开火（停电了）。',
+      '闭着眼凭嗅觉撒盐、淋醋、拌香油。',
+      '装盘时默念：黑暗里也能吃上饭，这就是生活。'
+    ];
+    r.warning = '纯凉拌，停电夜限定，请确认食材生吃安全。';
+  } else if (evt.id === 'cat_spice' && evt.spice) {
+    r.steps = (r.steps || []).concat(['临出锅前被猫打翻调料罐，猛撒一把' + evt.spice + '，认命吧。']);
+    r.warning = '这味道里有猫主子的倔强，请做好心理建设。';
+  }
+  return r;
+}
+
+
 module.exports = {
   fallbackRecipe, normalFallbackRecipe, extractJson, normalizeRecipe,
   STYLES, STYLE_PROMPTS, guessTag, calcPoints,
-  heuristicDarkScore, darkTier, findDangerWarnings, dailyChallenge, parseIngredients
+  heuristicDarkScore, darkTier, findDangerWarnings, dailyChallenge, parseIngredients,
+  RANDOM_EVENTS, SPICES, maybeEvent, applyEventToRecipe, EX_RECIPE
 };
