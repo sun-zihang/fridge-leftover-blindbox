@@ -63,7 +63,10 @@ test('toAppRecipe 含 image/video/shoppingList，图片为源站直链', () => {
   assert.ok(app.video && /bilibili/.test(app.video.url));
   const withImg = AB.RECIPES.filter((r) => r.image);
   assert.ok(withImg.length > 100, '带图数量应较多: ' + withImg.length);
-  assert.ok(withImg[0].image.indexOf('https://tuozhekongqi.github.io/A-Bowl-of-Home/imgs/') === 0, '图片应为源站直链');
+  assert.ok(withImg[0].image.indexOf('./abowl-imgs/') === 0, '图片应指向本地 abowl-imgs/');
+  const fs2 = require('node:fs');
+  const p2 = path.join(ROOT, 'web', 'abowl-imgs', path.basename(withImg[0].image));
+  assert.ok(fs2.existsSync(p2), '本地图片文件应存在: ' + p2);
 });
 
 test('生成文件保持 ES5（剥离字符串后无箭头/模板字符串/const-let）', () => {

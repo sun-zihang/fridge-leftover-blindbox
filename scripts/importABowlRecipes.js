@@ -99,7 +99,7 @@ function stripName(n) {
   return String(n || '').replace(/（[^）]*）/g, '').replace(/\([^)]*\)/g, '').replace(/[，,、；;：:\s]+$/g, '').trim();
 }
 
-function buildRecipes(dishes, photoMap, existing) {
+function buildRecipes(dishes, photoMap, existing, localMap) {
   const names = Object.keys(dishes);
   const out = [];
   const seen = {};
@@ -123,7 +123,7 @@ function buildRecipes(dishes, photoMap, existing) {
     const tips = Array.isArray(tipsRaw) ? tipsRaw.join('；') : (typeof tipsRaw === 'string' ? tipsRaw : '');
     const where = typeof d.where === 'string' ? d.where : '';
     const scene = typeof d.scene === 'string' ? d.scene : '';
-    const photo = photoMap[name] ? (BASE + photoMap[name]) : null;
+    const photo = localMap[name] ? ('./abowl-imgs/' + localMap[name]) : (photoMap[name] ? (BASE + photoMap[name]) : null);
     out.push({
       id: 'ab' + String(out.length + 1).padStart(3, '0'),
       name: name,
@@ -149,8 +149,8 @@ function buildRecipes(dishes, photoMap, existing) {
 function buildJs(recipes) {
   const dateStr = new Date().toISOString().slice(0, 10);
   return `// A-Bowl-of-Home（厨房小课堂）菜谱库（${recipes.length} 道家常菜）
-// 数据来源：https://github.com/tuozhekongqi/A-Bowl-of-Home（GitHub Pages：${BASE}）
-// 导入时间：${dateStr}；图片为源站直链（imgs/*.webp，约 29MB 不打包入库）；视频为 B 站搜索链接
+// 数据来源：https://github.com/tuozhekongqi/A-Bowl-of-Home（图片已本地化至 web/abowl-imgs/）
+// 导入时间：${dateStr}；图片为本地 abowl-imgs/（下载自源站，已部署进静态托管；缺图回退源站直链）；视频为 B 站搜索链接
 // 由 scripts/importABowlRecipes.js 生成，请勿手改（web 端使用，与 iddzz 同为带图/视频演示库）
 (function (root, factory) {
   if (typeof module !== 'undefined' && module.exports) module.exports = factory();
@@ -224,7 +224,9 @@ async function main() {
   console.log('    源菜谱：' + names.length + ' 道');
   console.log('[2/4] 构建并去重...');
   const existing = loadExistingNames();
-  const { recipes, dup, noIng } = buildRecipes(dishes, photoMap, existing);
+  let localMap = {};
+  try { localMap = JSON.parse(fs.readFileSync(path.resolve(ROOT, 'web', 'abowl-imgs-map.json'), 'utf8')); } catch (e) { console.log('    未找到本地图片映射，回退源站直链'); }
+  const { recipes, dup, noIng } = buildRecipes(dishes, photoMap, existing, localMap);
   console.log('    去重跳过：' + dup + '；缺食材/步骤跳过：' + noIng + '；净新增：' + recipes.length);
   const withImg = recipes.filter(function (r) { return !!r.image; }).length;
   console.log('    带图：' + withImg + '/' + recipes.length);

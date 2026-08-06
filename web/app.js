@@ -806,6 +806,7 @@ recognition.interimResults = true;
     setLunchbox(els.lunchboxTag, recipe);
     if (recipe.image) { els.dishImg.src = recipe.image; els.dishImg.classList.remove('hidden'); }
     else { els.dishImg.classList.add('hidden'); }
+    els.dishImg.onerror = function () { els.dishImg.classList.add('hidden'); };
     els.kitchenOpen.classList.toggle('hidden', !recipe || !(recipe.steps || []).length);
     els.result.classList.remove('skin-gold', 'skin-sick');
     els.stepsWrap.classList.add('hidden');
@@ -1727,6 +1728,7 @@ recognition.interimResults = true;
       dimg.src = recipe.image;
       dimg.alt = recipe.name;
       dimg.loading = 'lazy';
+      dimg.onerror = function () { if (dimg.parentNode) dimg.parentNode.removeChild(dimg); };
       els.detailBody.appendChild(dimg);
     }
 
