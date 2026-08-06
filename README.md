@@ -16,7 +16,7 @@
 - 👍 **红黑榜投票**：给榜单菜谱投「真香票 / 送医票」，票数置顶。
 - 📸 **海报生成**：Canvas 赛博朋克打卡海报（含二维码，5:8 自适应）+ 米其林认证书 + 急诊挂号单皮肤，可下载/分享。
 - 🔥 **黑暗料理红黑榜**：接入云数据库 recipes 展示真实评价；空数据或未配置环境时自动回退演示数据。
-- 📖 **内置 649 道家常菜谱库（145 iddzz 带演示视频 + 298 HowToCook + 206 家常）**：正常家常模式按「iddzz → HowToCook → 家常库」三级食材匹配出菜，AI 失败时兜底。
+- 📖 **内置 1009 道家常菜谱库（145 iddzz + 360 A-Bowl-of-Home（含成品图）+ 298 HowToCook + 206 家常）**：正常家常模式按「iddzz → A-Bowl-of-Home → HowToCook → 家常库」四级食材匹配出菜，AI 失败时兜底；带图菜谱在结果与详情页展示成品图。
 - 🧾 **详细菜单制作界面**：食材清单 / 备菜准备 / 分步做法 / 预计用时 / 主厨小贴士。
 - 🍱 **带饭友好度标签**：每道菜标注「✅ 微波加热不变味 / 🍱 适合第二天带饭 / ⚠️ 不宜带饭」。
 - 🗓️ **周计划管家**：基于虚拟冰箱一键生成下周 7 天不重复菜谱，统筹买菜清单（同名计数去重、冰箱已有自动扣除），可复制 / 导出 / 一键去外卖买菜。
@@ -33,7 +33,7 @@
 - 前端：原生 HTML + CSS + JS（零构建、零依赖），CloudBase JS SDK 走 CDN。
 - 后端：腾讯云开发 CloudBase（Serverless 云函数 + 静态网站托管 + 云数据库）。
 - AI：云函数 `generateRecipe` 内通过 `@cloudbase/node-sdk` 的 `app.ai()` 调用托管大模型（默认 `hy3` 腾讯混元，内置免费国产 AI，体验版可直接启用；备选 `qwen3.5-flash` 通义千问）。
-- 菜谱库：`iddzzRecipes.js`（145 道，含 B 站演示视频）+ `howToCookRecipes.js`（298 道，来源 Anduin2017/HowToCook，Unlicense 公有领域）+ `normalRecipes.js`（206 道），均为 UMD 三端共用——normal 模式按 iddzz → HowToCook → 家常库三级匹配，AI 失败时兜底。
+- 菜谱库：`iddzzRecipes.js`（145 道，含 B 站演示视频）+ `abowlRecipes.js`（360 道，来源 tuozhekongqi/A-Bowl-of-Home「厨房小课堂」，图片用源站直链、视频为 B 站搜索）+ `howToCookRecipes.js`（298 道，来源 Anduin2017/HowToCook，Unlicense 公有领域）+ `normalRecipes.js`（206 道），均为 UMD 三端共用——normal 模式按 iddzz → abowl → HowToCook → 家常库四级匹配，AI 失败时兜底。
 - 厨房管家纯逻辑：`practical.js`（UMD、可单测）——带饭标签 / 周计划 / 买菜清单合并 / 备菜方案 / 反向搜索，演示模式本地规则兜底，云模式 AI 增强（云函数新增 `weekPlan` / `mealPrep` / `reverseSearch` 三个 action）。
 
 - 对局状态机：`duel.js`（纯逻辑、可单测）——lobby→swap→cook→judge→done 五阶段，懒超时判负、心跳断线检测、平票平局、再来一局；`rooms` 集合存房间状态，网页端 watch 只读，写入全走云函数。
@@ -45,6 +45,7 @@
 │   ├── normalRecipes.js           # 内置家常菜谱库（206 道）
 │   ├── iddzzRecipes.js            # iddzz 菜谱库（145 道，含 B 站演示视频）
 │   ├── howToCookRecipes.js        # HowToCook 菜谱库（298 道，Unlicense）
+│   ├── abowlRecipes.js            # A-Bowl-of-Home 菜谱库（360 道，含成品图直链，web 端）
 │   ├── practical.js              # 厨房管家纯逻辑（周计划/备菜/反向搜索/带饭标签）
 │   ├── app.js
 │   └── 5ba02e89310da31b8a84990776a2d5c5.txt  # 微信域名校验文件（勿删）

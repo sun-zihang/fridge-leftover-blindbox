@@ -124,6 +124,7 @@ var state = { recipe: null, recordId: '', rated: false, generating: false, style
     favList: $('favList'),
     videoBox: $('videoBox'),
     lunchboxTag: $('lunchboxTag'),
+    dishImg: $('dishImg'),
     kitchenOpen: $('kitchenOpen'),
     kitchenDetailBtn: $('kitchenDetailBtn'),
     kitchenModal: $('kitchenModal'),
@@ -803,6 +804,8 @@ recognition.interimResults = true;
     }
     els.dishName.textContent = recipe.name;
     setLunchbox(els.lunchboxTag, recipe);
+    if (recipe.image) { els.dishImg.src = recipe.image; els.dishImg.classList.remove('hidden'); }
+    else { els.dishImg.classList.add('hidden'); }
     els.kitchenOpen.classList.toggle('hidden', !recipe || !(recipe.steps || []).length);
     els.result.classList.remove('skin-gold', 'skin-sick');
     els.stepsWrap.classList.add('hidden');
@@ -937,6 +940,10 @@ recognition.interimResults = true;
       if (window.IDDZZ_RECIPES) {
         var dm = window.IDDZZ_RECIPES.matchByIngredients(ingredients);
         if (dm.length) return window.IDDZZ_RECIPES.toAppRecipe(dm[0].recipe);
+      }
+      if (window.ABOWL_RECIPES) {
+        var am = window.ABOWL_RECIPES.matchByIngredients(ingredients);
+        if (am.length) return window.ABOWL_RECIPES.toAppRecipe(am[0].recipe);
       }
       if (window.HOWTOCOOK_RECIPES) {
         var hm = window.HOWTOCOOK_RECIPES.matchByIngredients(ingredients);
@@ -1714,6 +1721,14 @@ recognition.interimResults = true;
     if (!recipe) return;
     state.detailRecipe = recipe;
     els.detailBody.textContent = '';
+    if (recipe.image) {
+      var dimg = document.createElement('img');
+      dimg.className = 'detail-img';
+      dimg.src = recipe.image;
+      dimg.alt = recipe.name;
+      dimg.loading = 'lazy';
+      els.detailBody.appendChild(dimg);
+    }
 
     var head = document.createElement('div');
     head.className = 'detail-head';
@@ -2832,15 +2847,22 @@ recognition.interimResults = true;
 
   /* ===== 演示视频推荐（iddzz 菜谱库，bilibili 链接） ===== */
   function renderVideoRecommend(ings, recipe) {
-    if (!window.IDDZZ_RECIPES) { els.videoBox.classList.add('hidden'); return; }
+    if (!window.IDDZZ_RECIPES && !window.ABOWL_RECIPES) { els.videoBox.classList.add('hidden'); return; }
     var list = [];
     if (recipe && recipe.video) {
       list.push({ title: recipe.video.title || recipe.name + ' 家常做法', url: recipe.video.url, name: recipe.name, direct: true });
     } else {
-      var matches = window.IDDZZ_RECIPES.matchByIngredients(ings);
+      var matches = window.IDDZZ_RECIPES ? window.IDDZZ_RECIPES.matchByIngredients(ings) : [];
       for (var i = 0; i < matches.length && list.length < 2; i++) {
         var r = matches[i].recipe;
         if (r.video) list.push({ title: r.video.title || r.name + ' 家常做法', url: r.video.url, name: r.name, direct: false });
+      }
+      if (window.ABOWL_RECIPES) {
+        var am = window.ABOWL_RECIPES.matchByIngredients(ings);
+        for (var j = 0; j < am.length && list.length < 2; j++) {
+          var ar = am[j].recipe;
+          if (ar.video) list.push({ title: ar.video.title || ar.name + ' 家常做法', url: ar.video.url, name: ar.name, direct: false });
+        }
       }
     }
     if (!list.length) { els.videoBox.classList.add('hidden'); return; }
@@ -2869,6 +2891,7 @@ recognition.interimResults = true;
     if (poolsCache) return poolsCache;
     var pools = { iddzz: [], howToCook: [], normal: [] };
     if (window.IDDZZ_RECIPES) pools.iddzz = window.IDDZZ_RECIPES.RECIPES.map(function (r) { return window.IDDZZ_RECIPES.toAppRecipe(r); });
+    if (window.ABOWL_RECIPES) pools.abowl = window.ABOWL_RECIPES.RECIPES.map(function (r) { return window.ABOWL_RECIPES.toAppRecipe(r); });
     if (window.HOWTOCOOK_RECIPES) pools.howToCook = window.HOWTOCOOK_RECIPES.RECIPES.map(function (r) { return window.HOWTOCOOK_RECIPES.toAppRecipe(r); });
     if (window.NORMAL_RECIPES) pools.normal = window.NORMAL_RECIPES.RECIPES.map(function (r) { return window.NORMAL_RECIPES.toAppRecipe(r); });
     poolsCache = pools;

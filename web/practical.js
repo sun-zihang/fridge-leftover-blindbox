@@ -51,7 +51,7 @@
   function poolAll(pools) {
     var out = [];
     var seen = {};
-    ['iddzz', 'howToCook', 'normal'].forEach(function (k) {
+    ['iddzz', 'abowl', 'howToCook', 'normal'].forEach(function (k) {
       var arr = (pools && pools[k]) || [];
       arr.forEach(function (r) {
         if (!r || !r.name) return;
