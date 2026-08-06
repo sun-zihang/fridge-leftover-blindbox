@@ -291,11 +291,91 @@
     return { want: want, missing: missing, substitute: substitute, resultName: resultName, recipe: recipe, tip: tip };
   }
 
+  /* ================= 调味品用量规范化：统一为克(g)/毫升(ml) ================= */
+  var COND_DEFAULTS = [
+    { re: /盐/, unit: 'g', val: 3 },
+    { re: /生抽|酱油/, unit: 'ml', val: 10 },
+    { re: /老抽/, unit: 'ml', val: 5 },
+    { re: /料酒/, unit: 'ml', val: 10 },
+    { re: /醋/, unit: 'ml', val: 10 },
+    { re: /蚝油/, unit: 'g', val: 10 },
+    { re: /淀粉/, unit: 'g', val: 10 },
+    { re: /豆瓣酱/, unit: 'g', val: 15 },
+    { re: /番茄酱/, unit: 'g', val: 15 },
+    { re: /甜面酱|黄豆酱/, unit: 'g', val: 15 },
+    { re: /鸡精|味精/, unit: 'g', val: 2 },
+    { re: /胡椒|花椒|孜然|五香粉|十三香|辣椒粉|咖喱粉/, unit: 'g', val: 2 },
+    { re: /八角|桂皮|香叶|干辣椒|陈皮/, unit: 'g', val: 2 },
+    { re: /香油|麻油|辣椒油|油泼辣子|花椒油/, unit: 'ml', val: 5 },
+    { re: /食用油|植物油|菜籽油|橄榄油|花生油|色拉油/, unit: 'ml', val: 15 },
+    { re: /蜂蜜/, unit: 'g', val: 10 },
+    { re: /芝麻/, unit: 'g', val: 5 },
+    { re: /糖|冰糖/, unit: 'g', val: 5 }
+  ];
+  var SPOON_ML = { '汤匙': 15, '大勺': 15, '大匙': 15, '小勺': 5, '小匙': 5, '茶匙': 5, '勺': 15, '匙': 5, '撮': 1, '捏': 1 };
+  var CN_NUM = { '一': 1, '二': 2, '两': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '半': 0.5 };
+  var VAGUE_AMOUNT = /适量|少许|少量|一点点|一点/;
+  function condDefault(text) {
+    for (var i = 0; i < COND_DEFAULTS.length; i++) {
+      if (COND_DEFAULTS[i].re.test(text)) return COND_DEFAULTS[i];
+    }
+    return null;
+  }
+  function parseAmountNum(t) {
+    t = String(t || '').trim();
+    if (/^\d+(\.\d+)?$/.test(t)) return parseFloat(t);
+    if (/^\d+\s*\/\s*\d+$/.test(t)) {
+      var p = t.split('/');
+      return parseFloat(p[0]) / parseFloat(p[1]);
+    }
+    if (CN_NUM[t] !== undefined) return CN_NUM[t];
+    return null;
+  }
+  // 把调味品条目里的用量统一为克/毫升；非调味品或比例/可选类保持原样
+  function normalizeAmount(text) {
+    var s = String(text || '').trim();
+    if (!s) return s;
+    var d = condDefault(s);
+    if (!d) return s;
+    // 比例行（酱油 : 醋 : 油泼辣子 3 : 2 : 2）不换算
+    if (/[:：]\s*\d/.test(s)) return s;
+    // 已有数值 + 克/毫升/公斤：只规范化中文单位
+    var has = s.match(/([\d０-９]+(?:\.[\d０-９]+)?)\s*(克|g|G|毫升|ml|mL|ML|公斤|kg)/);
+    if (has) {
+      var num = parseFloat(String(has[1]).replace(/[０-９]/g, function (ch) { return String('０１２３４５６７８９'.indexOf(ch)); }));
+      var unit = /毫升|ml|mL|ML/.test(has[2]) ? 'ml' : (/公斤|kg/.test(has[2]) ? 'kg' : 'g');
+      return s.replace(has[0], num + unit);
+    }
+    // 尾部带数量/勺/适量
+    var amt = s.match(/(\d+(?:\.\d+)?|\d+\s*\/\s*\d+|半|一|两|二|三|四|五|六|七|八|九|十|适量|少许|少量|一点点|一点)\s*(汤匙|茶匙|大勺|小勺|大匙|小匙|勺|匙|撮|捏)?\s*$/);
+    if (amt) {
+      var n = parseAmountNum(amt[1]);
+      var spoon = amt[2] || '';
+      var val;
+      if (n === null) val = d.val;
+      else if (spoon) val = n * (SPOON_ML[spoon] || 15);
+      else if (VAGUE_AMOUNT.test(amt[1])) val = d.val;
+      else val = n;
+      val = Math.max(1, Math.round(val));
+      var namePart = s.slice(0, s.length - amt[0].length).replace(/[\s:：=]+$/g, '').trim();
+      return namePart ? (namePart + ' ' + val + d.unit) : (val + d.unit);
+    }
+    if (VAGUE_AMOUNT.test(s)) return s.replace(VAGUE_AMOUNT, d.val + d.unit);
+    // 可选/或/含逗号但无尾部数量：保持原样，避免破坏 "白糖 or 冰糖" / "[可选] 柠檬汁或白醋"
+    if (/或|or|\[|\]|，|,/.test(s)) return s;
+    // 纯名字无数量（"花椒"、"盐 g"）
+    var bare = s.replace(/\b(g|G|克|ml|mL|ML|毫升)\b/g, '').replace(/[\s:：=]+$/g, '').trim();
+    if (bare && bare.length <= 10) return bare + ' ' + d.val + d.unit;
+    return s;
+  }
+
+
   return {
     lunchboxTag: lunchboxTag,
     buildWeekPlanLocal: buildWeekPlanLocal,
     mergeShoppingList: mergeShoppingList,
     buildMealPrepLocal: buildMealPrepLocal,
-    reverseSearchLocal: reverseSearchLocal
+    reverseSearchLocal: reverseSearchLocal,
+    normalizeAmount: normalizeAmount
   };
 });

@@ -1745,7 +1745,7 @@ recognition.interimResults = true;
       ul.className = 'detail-ings';
       recipe.ings.forEach(function (ing) {
         var li = document.createElement('li');
-        li.textContent = ing;
+        li.textContent = prettyIng(ing);
         ul.appendChild(li);
       });
       sec.appendChild(ul);
@@ -2873,6 +2873,9 @@ recognition.interimResults = true;
     if (window.NORMAL_RECIPES) pools.normal = window.NORMAL_RECIPES.RECIPES.map(function (r) { return window.NORMAL_RECIPES.toAppRecipe(r); });
     poolsCache = pools;
     return pools;
+  }
+  function prettyIng(s) {
+    return (PRACTICAL && PRACTICAL.normalizeAmount) ? PRACTICAL.normalizeAmount(s) : s;
   }
   function fridgeAliveNames() {
     return fridgeItems.filter(function (it) { return daysLeft(it) > 0; }).map(function (it) { return it.name; });

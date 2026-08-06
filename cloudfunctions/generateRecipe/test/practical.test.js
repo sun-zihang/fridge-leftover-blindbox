@@ -98,3 +98,21 @@ test('reverseSearchLocal 解析「想吃X但没Y」并给出平替', () => {
   const rs3 = P.reverseSearchLocal(pools(), '想吃飞天意面', []);
   assert.ok(rs3.resultName, '应有兜底结果');
 });
+
+test('normalizeAmount 调味品统一为克/毫升', () => {
+  assert.strictEqual(P.normalizeAmount('盐 适量'), '盐 3g');
+  assert.strictEqual(P.normalizeAmount('白糖 2 汤匙'), '白糖 30g');
+  assert.strictEqual(P.normalizeAmount('白糖 半汤匙'), '白糖 8g');
+  assert.strictEqual(P.normalizeAmount('生抽 1/2 茶匙'), '生抽 3ml');
+  assert.strictEqual(P.normalizeAmount('盐 1/4 茶匙'), '盐 1g');
+  assert.strictEqual(P.normalizeAmount('料酒 1勺'), '料酒 15ml');
+  assert.strictEqual(P.normalizeAmount('生抽 3 汤匙'), '生抽 45ml');
+  assert.strictEqual(P.normalizeAmount('白糖 30克'), '白糖 30g');
+  assert.strictEqual(P.normalizeAmount('盐量 10 克 * 份数'), '盐量 10g * 份数');
+  assert.strictEqual(P.normalizeAmount('花椒'), '花椒 2g');
+  assert.strictEqual(P.normalizeAmount('盐 g'), '盐 3g');
+  assert.strictEqual(P.normalizeAmount('酱油 : 醋 : 油泼辣子 3 : 2 : 2'), '酱油 : 醋 : 油泼辣子 3 : 2 : 2');
+  assert.strictEqual(P.normalizeAmount('白糖 or 冰糖'), '白糖 or 冰糖');
+  assert.strictEqual(P.normalizeAmount('鸡腿 2 个'), '鸡腿 2 个');
+  assert.strictEqual(P.normalizeAmount('葱一根，姜四片，料酒'), '葱一根，姜四片，料酒');
+});
