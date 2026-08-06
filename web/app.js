@@ -804,7 +804,8 @@ recognition.interimResults = true;
     }
     els.dishName.textContent = recipe.name;
     setLunchbox(els.lunchboxTag, recipe);
-    if (recipe.image) { els.dishImg.src = recipe.image; els.dishImg.classList.remove('hidden'); }
+    var dishImgSrc = ensureImage(recipe);
+    if (dishImgSrc) { els.dishImg.src = dishImgSrc; els.dishImg.classList.remove('hidden'); }
     else { els.dishImg.classList.add('hidden'); }
     els.dishImg.onerror = function () { els.dishImg.classList.add('hidden'); };
     els.kitchenOpen.classList.toggle('hidden', !recipe || !(recipe.steps || []).length);
@@ -1722,10 +1723,11 @@ recognition.interimResults = true;
     if (!recipe) return;
     state.detailRecipe = recipe;
     els.detailBody.textContent = '';
-    if (recipe.image) {
+    var rimg = ensureImage(recipe);
+    if (rimg) {
       var dimg = document.createElement('img');
       dimg.className = 'detail-img';
-      dimg.src = recipe.image;
+      dimg.src = rimg;
       dimg.alt = recipe.name;
       dimg.loading = 'lazy';
       dimg.onerror = function () { if (dimg.parentNode) dimg.parentNode.removeChild(dimg); };
@@ -2849,10 +2851,10 @@ recognition.interimResults = true;
 
   /* ===== 演示视频推荐（iddzz 菜谱库，bilibili 链接） ===== */
   function renderVideoRecommend(ings, recipe) {
-    if (!window.IDDZZ_RECIPES && !window.ABOWL_RECIPES) { els.videoBox.classList.add('hidden'); return; }
     var list = [];
-    if (recipe && recipe.video) {
-      list.push({ title: recipe.video.title || recipe.name + ' 家常做法', url: recipe.video.url, name: recipe.name, direct: true });
+    var rv = recipeVideo(recipe);
+    if (rv) {
+      list.push({ title: rv.title || recipe.name + ' 家常做法', url: rv.url, name: recipe.name, direct: true });
     } else {
       var matches = window.IDDZZ_RECIPES ? window.IDDZZ_RECIPES.matchByIngredients(ings) : [];
       for (var i = 0; i < matches.length && list.length < 2; i++) {
@@ -2898,6 +2900,49 @@ recognition.interimResults = true;
     if (window.NORMAL_RECIPES) pools.normal = window.NORMAL_RECIPES.RECIPES.map(function (r) { return window.NORMAL_RECIPES.toAppRecipe(r); });
     poolsCache = pools;
     return pools;
+  }
+  function recipeVideo(r) {
+    if (r && r.video) return r.video;
+    if (r && r.name && PRACTICAL && PRACTICAL.videoFor) return PRACTICAL.videoFor(r.name);
+    return null;
+  }
+  var cardImgCache = {};
+  function wrapCardText(ctx, text, maxW) {
+    var out = [], cur = '';
+    for (var i = 0; i < text.length; i++) {
+      cur += text[i];
+      if (ctx.measureText(cur).width > maxW) { out.push(cur.slice(0, -1) || cur); cur = text[i]; }
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+  // 无真实成品图时，运行时生成赛博朋克菜名卡片图（缓存，1009 道全覆盖）
+  function ensureImage(r) {
+    if (!r) return null;
+    if (r.image) return r.image;
+    var key = 'card_' + (r.name || '');
+    if (cardImgCache[key]) return cardImgCache[key];
+    try {
+      var cv = document.createElement('canvas');
+      cv.width = 640; cv.height = 400;
+      var ctx = cv.getContext('2d');
+      var g = ctx.createLinearGradient(0, 0, 640, 400);
+      g.addColorStop(0, '#0d1330'); g.addColorStop(0.5, '#17224d'); g.addColorStop(1, '#2a1a4a');
+      ctx.fillStyle = g; ctx.fillRect(0, 0, 640, 400);
+      ctx.strokeStyle = 'rgba(0,240,255,.55)'; ctx.lineWidth = 6; ctx.strokeRect(10, 10, 620, 380);
+      ctx.strokeStyle = 'rgba(255,45,120,.35)'; ctx.lineWidth = 2; ctx.strokeRect(18, 18, 604, 364);
+      ctx.font = '150px serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillText(r.emoji || '🍳', 320, 170);
+      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 44px "Microsoft YaHei", "PingFang SC", sans-serif';
+      var lines = wrapCardText(ctx, r.name || '家常菜', 520);
+      var y = 292;
+      for (var li = 0; li < lines.length && li < 2; li++) { ctx.fillText(lines[li], 320, y); y += 52; }
+      ctx.fillStyle = 'rgba(0,240,255,.7)'; ctx.font = '20px "Microsoft YaHei", sans-serif';
+      ctx.fillText('冰箱剩菜盲盒 · 深夜食堂', 320, 374);
+      var dataUrl = cv.toDataURL('image/png');
+      cardImgCache[key] = dataUrl;
+      return dataUrl;
+    } catch (e) { return null; }
   }
   function prettyIng(s) {
     return (PRACTICAL && PRACTICAL.normalizeAmount) ? PRACTICAL.normalizeAmount(s) : s;
@@ -3143,8 +3188,9 @@ recognition.interimResults = true;
     els.kitchenStepLabel.textContent = '第 ' + (i + 1) + ' 步';
     els.kitchenStep.textContent = steps[i];
     els.kitchenHeat.textContent = fireHint(steps[i]) || '';
-    els.kitchenVideo.classList.toggle('hidden', !(r.video && r.video.url));
-    if (r.video && r.video.url) els.kitchenVideo.href = r.video.url;
+    var kv = recipeVideo(r);
+    els.kitchenVideo.classList.toggle('hidden', !(kv && kv.url));
+    if (kv && kv.url) els.kitchenVideo.href = kv.url;
     kitchenSpeak('第' + (i + 1) + '步，' + steps[i]);
   }
   function openKitchen(recipe) {

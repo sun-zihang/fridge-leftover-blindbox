@@ -116,3 +116,12 @@ test('normalizeAmount 调味品统一为克/毫升', () => {
   assert.strictEqual(P.normalizeAmount('鸡腿 2 个'), '鸡腿 2 个');
   assert.strictEqual(P.normalizeAmount('葱一根，姜四片，料酒'), '葱一根，姜四片，料酒');
 });
+
+test('videoFor 无视频菜谱也能补全 B 站视频链接', () => {
+  const v = P.videoFor('麻婆豆腐');
+  assert.ok(v && /bilibili/.test(v.url), '应返回 bilibili 链接');
+  assert.ok(v.url.indexOf('麻婆豆腐') >= 0 || v.url.indexOf(encodeURIComponent('麻婆豆腐')) >= 0, '链接应含菜名关键词');
+  assert.ok(v.title === '麻婆豆腐 家常做法');
+  assert.strictEqual(P.videoFor(''), null);
+  assert.strictEqual(P.videoFor(null), null);
+});

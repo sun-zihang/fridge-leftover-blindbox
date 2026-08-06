@@ -370,12 +370,22 @@
   }
 
 
+  /* ================= 视频兜底：按菜名生成 B 站搜索链接（无 video 字段的菜统一补全） ================= */
+  function videoFor(name) {
+    var n = String(name || '').trim();
+    if (!n) return null;
+    var kw = encodeURIComponent(n + ' 家常做法');
+    return { url: 'https://search.bilibili.com/all?keyword=' + kw, title: n + ' 家常做法' };
+  }
+
+
   return {
     lunchboxTag: lunchboxTag,
     buildWeekPlanLocal: buildWeekPlanLocal,
     mergeShoppingList: mergeShoppingList,
     buildMealPrepLocal: buildMealPrepLocal,
     reverseSearchLocal: reverseSearchLocal,
-    normalizeAmount: normalizeAmount
+    normalizeAmount: normalizeAmount,
+    videoFor: videoFor
   };
 });
