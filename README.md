@@ -23,6 +23,10 @@
 - 🥡 **备菜指南（Meal Prep）**：批量买回一种食材（如鸡胸肉），自动生成 3-5 条预处理方案（切块腌制 / 撕丝冷藏…含存储方式与保质期）。
 - 👨‍🍳 **厨房模式**：全屏大字步骤 + 浏览器语音播报（TTS）+ 可语音控制「下一步 / 上一步 / 暂停 / 退出」，手湿也能照着做。
 - 🤖 **反向搜索 · 平替主厨**：输入「想吃糖醋排骨，但没排骨了」，用冰箱现有食材给出平替方案与菜谱。
+- 🎚 **口味偏好**：喜辣/清淡/酸甜/重口 + 忌口（香菜/海鲜/…/自定义）+ 快手菜习惯；云函数 prompt 注入、本地匹配过滤加权，全链路生效。
+- ✨ **AI 优化建议**：黑暗菜谱一键改良（云 AI 出改良版，演示模式本地改良方向文案兜底），可收藏改良版。
+- 🛒 **累积购物清单**：多道菜待购辅料/调味品去重累计，单项删除/清空/复制/导出，超市一次购齐。
+- ⏱ **步骤计时器**：详情步骤卡与厨房模式内嵌倒计时（自动识别「焖煮10分钟」等时长，结束提示音）。
 - 🛡️ **免责声明**：底部食品免责提示，娱乐向内容不构成饮食建议。
 - ⚔️ **双人盲盒对局**：创建/加入房间（6 位房间码 + 邀请链接），双方各报 3 样以上食材 → 自动交换一颗「炸弹食材」→ 同时让 AI 出菜 → 审判阶段双菜并排揭晓、互打「离谱分」，分高者赢；输家三选一惩罚（发朋友圈文案 / 换头像 1 小时 / 下局用指定食材），可「再来一局」。
 - 🎲 **厨房随机事件**：每次生成有 10% 概率触发「停电了 / 猫打翻调料 / 灵感爆发」，事件横幅 + 专属音效 + 菜谱随之变化。
@@ -33,8 +37,8 @@
 - 前端：原生 HTML + CSS + JS（零构建、零依赖），CloudBase JS SDK 走 CDN。
 - 后端：腾讯云开发 CloudBase（Serverless 云函数 + 静态网站托管 + 云数据库）。
 - AI：云函数 `generateRecipe` 内通过 `@cloudbase/node-sdk` 的 `app.ai()` 调用托管大模型（默认 `hy3` 腾讯混元，内置免费国产 AI，体验版可直接启用；备选 `qwen3.5-flash` 通义千问）。
-- 菜谱库：`iddzzRecipes.js`（145 道，含 B 站演示视频）+ `abowlRecipes.js`（360 道，来源 tuozhekongqi/A-Bowl-of-Home「厨房小课堂」，图片用源站直链、视频为 B 站搜索）+ `howToCookRecipes.js`（298 道，来源 Anduin2017/HowToCook，Unlicense 公有领域）+ `normalRecipes.js`（206 道），均为 UMD 三端共用——normal 模式按 iddzz → abowl → HowToCook → 家常库四级匹配，AI 失败时兜底。
-- 厨房管家纯逻辑：`practical.js`（UMD、可单测）——带饭标签 / 周计划 / 买菜清单合并 / 备菜方案 / 反向搜索，演示模式本地规则兜底，云模式 AI 增强（云函数新增 `weekPlan` / `mealPrep` / `reverseSearch` 三个 action）。
+- 菜谱库：`iddzzRecipes.js`（145 道，含 B 站演示视频）+ `abowlRecipes.js`（360 道，来源 tuozhekongqi/A-Bowl-of-Home「厨房小课堂」，577 张成品图已下载到 web/abowl-imgs 随静态托管部署、视频为 B 站搜索）+ `howToCookRecipes.js`（298 道，来源 Anduin2017/HowToCook，Unlicense 公有领域）+ `normalRecipes.js`（206 道），均为 UMD 三端共用——normal 模式按 iddzz → abowl → HowToCook → 家常库四级匹配，AI 失败时兜底。
+- 厨房管家纯逻辑：`practical.js`（UMD、可单测）——带饭标签 / 周计划 / 买菜清单合并 / 备菜方案 / 反向搜索 / 口味偏好过滤加权（applyPrefs）/ 本地改良方向（improveLocal）/ 累积清单合并（accumulateShopping）/ 步骤时长提取（stepSeconds）/ 用时归一化（prettyTime）/ 视频兜底（videoFor）/ 调味品克毫升（normalizeAmount），演示模式本地规则兜底，云模式 AI 增强（云函数新增 `weekPlan` / `mealPrep` / `reverseSearch` / `improve` 四个 action，`generate` 支持 preferences）。
 
 - 对局状态机：`duel.js`（纯逻辑、可单测）——lobby→swap→cook→judge→done 五阶段，懒超时判负、心跳断线检测、平票平局、再来一局；`rooms` 集合存房间状态，网页端 watch 只读，写入全走云函数。
 ## 📁 项目结构
@@ -45,14 +49,15 @@
 │   ├── normalRecipes.js           # 内置家常菜谱库（206 道）
 │   ├── iddzzRecipes.js            # iddzz 菜谱库（145 道，含 B 站演示视频）
 │   ├── howToCookRecipes.js        # HowToCook 菜谱库（298 道，Unlicense）
-│   ├── abowlRecipes.js            # A-Bowl-of-Home 菜谱库（360 道，含成品图直链，web 端）
+│   ├── abowlRecipes.js            # A-Bowl-of-Home 菜谱库（360 道，成品图在 abowl-imgs/ 本地）
+│   ├── abowl-imgs/                  # A-Bowl-of-Home 成品图（577 张，约 24MB，随托管部署）
 │   ├── practical.js              # 厨房管家纯逻辑（周计划/备菜/反向搜索/带饭标签）
 │   ├── app.js
 │   └── 5ba02e89310da31b8a84990776a2d5c5.txt  # 微信域名校验文件（勿删）
 ├── scripts/
 │   └── importHowToCook.js        # 开发期：HowToCook 菜谱导入（node scripts/importHowToCook.js）
 ├── cloudfunctions/
-│   └── generateRecipe/         # AI 生成菜谱云函数（generate+persona/synth / rate / listRank / dailyChallenge / vote / recognizeImage / weekPlan / mealPrep / reverseSearch）
+│   └── generateRecipe/         # AI 生成菜谱云函数（generate+persona/synth / rate / listRank / dailyChallenge / vote / recognizeImage / weekPlan / mealPrep / reverseSearch / improve（generate 支持 preferences 偏好注入））
 │       ├── index.js
 │       ├── recipe.js           # 纯逻辑（JSON 提取/校验/兜底），可本地单测
 │       ├── duel.js             # 双人对局纯状态机（lobby/swap/cook/judge/done）
