@@ -1293,3 +1293,45 @@ html, body {
   .week-plan-list { grid-template-columns: 1fr; }
   .kitchen-actions { grid-template-columns: 1fr 1fr; gap: 8px; }
 }
+
+
+/* ===== 口味偏好 / AI 优化 / 累积清单 / 步骤计时器 ===== */
+.pref-btn { margin-left: 8px; padding: 8px 12px; border-radius: 999px; border: 1px solid rgba(0,240,255,.4); background: rgba(0,240,255,.08); color: #00f0ff; font-size: 13px; font-family: inherit; cursor: pointer; }
+.pref-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 320; }
+.pref-backdrop { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.6); }
+.pref-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(92vw, 420px); max-height: 82vh; overflow-y: auto; background: #111a38; border: 1px solid rgba(0,240,255,.35); border-radius: 18px; padding: 20px; box-shadow: 0 0 40px rgba(0,240,255,.15); }
+.pref-close { position: absolute; top: 10px; right: 14px; background: none; border: none; color: #fff; font-size: 22px; cursor: pointer; }
+.pref-title { font-size: 18px; color: #00f0ff; }
+.pref-sub { font-size: 12px; color: rgba(255,255,255,.55); margin: 6px 0 14px; }
+.pref-group { margin-bottom: 14px; }
+.pref-group > b { display: block; font-size: 13px; color: #ffd166; margin-bottom: 8px; }
+.pref-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.pref-chip { padding: 7px 13px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.05); color: #e6f7ff; font-size: 13px; font-family: inherit; cursor: pointer; }
+.pref-chip.active { border-color: #00f0ff; background: rgba(0,240,255,.18); color: #00f0ff; }
+.pref-input { width: 100%; margin-top: 8px; background: rgba(255,255,255,.06); border: 1px solid rgba(0,240,255,.3); border-radius: 10px; color: #e6f7ff; padding: 8px 10px; font-size: 13px; font-family: inherit; outline: none; }
+.pref-actions { display: flex; gap: 10px; margin-top: 6px; }
+.pref-save { flex: 1; padding: 11px; border-radius: 12px; border: none; background: linear-gradient(135deg, #00b3d6, #00f0ff); color: #06222a; font-weight: 900; font-family: inherit; cursor: pointer; }
+.pref-reset { padding: 11px 16px; border-radius: 12px; border: 1px solid rgba(255,45,120,.5); background: rgba(255,45,120,.1); color: #ff6b9d; font-family: inherit; cursor: pointer; }
+
+.improve-btn { display: block; width: 100%; margin-top: 10px; padding: 12px; border-radius: 14px; border: 1px solid rgba(0,240,255,.4); background: rgba(0,240,255,.08); color: #00f0ff; font-weight: 900; font-size: 15px; font-family: inherit; cursor: pointer; }
+.improve-box { margin-top: 10px; }
+.improve-card { background: rgba(0,240,255,.06); border: 1px solid rgba(0,240,255,.25); border-radius: 14px; padding: 12px 14px; }
+.improve-card.ai { border-color: rgba(255,209,102,.4); background: rgba(255,209,102,.06); }
+.improve-head { font-weight: 900; color: #ffd166; font-size: 15px; margin-bottom: 8px; }
+.improve-tip { font-size: 13px; color: rgba(255,255,255,.75); margin: 4px 0; }
+.improve-why { font-size: 13px; color: #00f0ff; margin: 4px 0; }
+.improve-ings { font-size: 12px; color: rgba(255,255,255,.55); margin: 6px 0; }
+.improve-btns { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+
+.accum-card { margin-top: 16px; }
+.accum-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.accum-list .week-shop-item { display: inline-flex; align-items: center; gap: 4px; }
+.accum-list .fi-del { background: none; border: none; color: rgba(255,255,255,.6); cursor: pointer; font-size: 14px; padding: 0 2px; }
+
+.step-timer { display: flex; align-items: center; gap: 10px; margin-top: 6px; }
+.timer-btn { padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(0,240,255,.4); background: rgba(0,240,255,.08); color: #00f0ff; font-size: 12px; font-family: inherit; cursor: pointer; }
+.timer-disp { color: #ffd166; font-size: 16px; font-variant-numeric: tabular-nums; }
+
+.kitchen-timer { margin-top: 18px; display: flex; align-items: center; gap: 12px; justify-content: center; }
+.kitchen-timer-btn { padding: 12px 22px; border-radius: 999px; border: 1px solid rgba(0,240,255,.5); background: rgba(0,240,255,.12); color: #00f0ff; font-size: 16px; font-weight: 900; font-family: inherit; cursor: pointer; }
+.kitchen-timer-disp { color: #ffd166; font-size: 26px; font-variant-numeric: tabular-nums; }

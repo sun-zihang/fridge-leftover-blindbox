@@ -394,6 +394,102 @@
   }
 
 
+  /* ================= 口味偏好：本地匹配过滤/加权（云函数走 prompt 注入） ================= */
+  function applyPrefs(poolRecipes, prefs) {
+    var list = (poolRecipes || []).slice();
+    var p = prefs || {};
+    var avoids = [];
+    (p.avoid || []).forEach(function (a) { if (a) avoids.push(norm(a)); });
+    if (p.avoidCustom) {
+      String(p.avoidCustom).split(/[，,、\s]+/).forEach(function (a) { a = a.trim(); if (a) avoids.push(norm(a)); });
+    }
+    if (avoids.length) {
+      var filtered = list.filter(function (r) {
+        var text = norm(r.name) + ' ' + (r.ingNames || []).map(norm).join(' ') + ' ' + (r.ings || []).join(' ');
+        return !avoids.some(function (a) { return text.indexOf(a) >= 0; });
+      });
+      if (filtered.length) list = filtered; // 过滤后为空则回退不过滤
+    }
+    var flavors = (p.flavor || []).map(norm);
+    var habit = p.habit || '';
+    function score(r) {
+      var s = 0;
+      var text = norm(r.name) + ' ' + (r.ings || []).join(' ') + ' ' + (r.steps || []).join(' ');
+      if (flavors.indexOf('辣') >= 0 && /辣|辣椒|花椒|藤椒|孜然|豆瓣/.test(text)) s += 2;
+      if (flavors.indexOf('清淡') >= 0 && !/油炸|干炸|油大|麻辣|重油/.test(text)) s += 1;
+      if (flavors.indexOf('酸甜') >= 0 && /糖醋|番茄|酸甜|菠萝|咕噜|梅/.test(text)) s += 2;
+      if (habit === 'quick') {
+        var n = (r.steps || []).length;
+        if (n <= 3) s += 3; else if (n <= 5) s += 1;
+      }
+      return s;
+    }
+    if (flavors.length || habit === 'quick') {
+      list = list.slice().sort(function (a, b) { return score(b) - score(a); });
+    }
+    return list;
+  }
+
+  /* ================= AI 优化建议：本地通用改良方向（演示模式兜底） ================= */
+  function improveLocal(recipe) {
+    var r = recipe || {};
+    var text = norm(r.name) + ' ' + (r.ings || []).join(' ') + ' ' + (r.steps || []).join(' ');
+    var tips = [];
+    if (/可乐|汽水|雪碧/.test(text)) tips.push('含碳酸饮料口味偏甜冲：建议用生抽 + 少许糖/醋替代提鲜，口感更和谐。');
+    if (/泡面|方便面/.test(text)) tips.push('泡面易咸腻：调料包减半，多加青菜/蛋/肉，主食更均衡。');
+    if (/油炸|干炸|油大/.test(text)) tips.push('油炸油大：改少油煎或空气炸，配盘绿叶菜解腻。');
+    if (/辣|辣椒|花椒/.test(text)) tips.push('辛辣偏重：减辣量，加糖/醋/奶类中和，或配主食同食。');
+    if (/苦瓜|苦味/.test(text)) tips.push('苦味明显：焯水或盐腌去苦，用咸鲜/酸甜调味平衡。');
+    if (/剩饭|剩菜|隔夜/.test(text)) tips.push('隔夜/剩菜：彻底加热至沸腾，尽快食用，避免反复加热。');
+    if (!tips.length) tips.push('整体不错：按 少油少盐、食材切配均匀、火候适中 微调，更家常更稳。');
+    return tips.slice(0, 3);
+  }
+
+  /* ================= 累积购物清单：并入并按名称去重计数 ================= */
+  function accumulateShopping(list, recipe) {
+    var out = (list || []).map(function (it) { return { name: it.name, count: it.count || 1 }; });
+    var items = (recipe && recipe.shoppingList) || [];
+    items.forEach(function (s) {
+      var name = ingNameOf(s);
+      if (!name) return;
+      var key = norm(name);
+      var hit = null;
+      for (var i = 0; i < out.length; i++) { if (norm(out[i].name) === key) { hit = out[i]; break; } }
+      if (hit) hit.count += 1;
+      else out.push({ name: name, count: 1 });
+    });
+    return out;
+  }
+
+  /* ================= 步骤时长提取（计时器用，支持中文数字） ================= */
+  var CN_DIGIT = { '一': 1, '二': 2, '两': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '半': 0.5 };
+  function parseCnNum(str) {
+    if (str === '半') return 0.5;
+    var m = String(str || '').match(/^([一二两三四五六七八九])?十([一二两三四五六七八九])?$/);
+    if (m) {
+      var tens = m[1] ? CN_DIGIT[m[1]] : 1;
+      var ones = m[2] ? CN_DIGIT[m[2]] : 0;
+      return tens * 10 + ones;
+    }
+    if (CN_DIGIT[str] !== undefined) return CN_DIGIT[str];
+    return null;
+  }
+  function stepSeconds(text) {
+    var s = String(text || '');
+    var m = s.match(/(\d+(\.\d+)?)\s*(分钟|分|小时)/);
+    if (m) {
+      var n = parseFloat(m[1]);
+      return m[3] === '小时' ? Math.round(n * 3600) : Math.round(n * 60);
+    }
+    var mc = s.match(/([一二两三四五六七八九十半]+)\s*(分钟|小时)/);
+    if (mc) {
+      var cn = parseCnNum(mc[1]);
+      if (cn) return mc[2] === '小时' ? Math.round(cn * 3600) : Math.round(cn * 60);
+    }
+    return 0;
+  }
+
+
   return {
     lunchboxTag: lunchboxTag,
     buildWeekPlanLocal: buildWeekPlanLocal,
@@ -402,6 +498,10 @@
     reverseSearchLocal: reverseSearchLocal,
     normalizeAmount: normalizeAmount,
     videoFor: videoFor,
-    prettyTime: prettyTime
+    prettyTime: prettyTime,
+    applyPrefs: applyPrefs,
+    improveLocal: improveLocal,
+    accumulateShopping: accumulateShopping,
+    stepSeconds: stepSeconds
   };
 });

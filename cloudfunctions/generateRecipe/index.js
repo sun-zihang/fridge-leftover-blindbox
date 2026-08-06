@@ -101,6 +101,13 @@ const REVERSE_PROMPT =
   '{"want":"想吃的菜","missing":"缺的食材","substitute":"用来替代的冰箱食材","resultName":"平替菜名","recipe":{"name":"菜名","steps":["步骤1","步骤2"],"ings":["食材 1 个"],"desc":"一句介绍","tips":"一句贴士"},"tip":"一句平替说明"}。' +
   'recipe 给出一道可以直接做的平替菜谱（步骤 2-5 步）。';
 
+// AI 优化建议 Prompt：把黑暗/不常规菜谱改良成常规好吃
+const IMPROVE_PROMPT =
+  '你是「冰箱剩菜盲盒」的改良主厨。用户觉得原菜谱太黑暗/不常规，请基于原菜谱给出一份更常规、更好吃、更容易上手的改良版。' +
+  '保留原菜谱可用的部分，把奇怪的搭配换成常规做法，并避开用户忌口（如有）。' +
+  '只输出 JSON，不要输出多余文字：' +
+  '{"name":"改良后的菜名（不超过10个字）","steps":["步骤1","步骤2"],"ings":["食材 1 个"],"plating":"简单实用的摆盘建议","warning":"一句注意事项","tips":"一句小贴士","why":"改良理由（一句话说明改了什么、为什么更好）"}。';
+
 // ---------- 工具 ----------
 
 function chinaToday() {
@@ -219,7 +226,7 @@ function stylesView(p) {
 
 // ---------- AI 生成 ----------
 
-async function generate(ingredients, style, mode, persona) {
+async function generate(ingredients, style, mode, persona, preferences) {
   // 彩蛋：输入含「前任/礼物」→ 断舍离爆炒苦瓜
   if (/前任|礼物/.test(String(ingredients || ''))) {
     var ex = decorate(Object.assign({}, EX_RECIPE), ingredients, mode, false, false, '');
@@ -262,6 +269,17 @@ async function generate(ingredients, style, mode, persona) {
       }
       if (personaPrompt) {
         messages.push({ role: 'user', content: '人设要求：' + personaPrompt });
+      }
+      if (preferences && typeof preferences === 'object') {
+        const pp = preferences;
+        const flavors = Array.isArray(pp.flavor) ? pp.flavor.filter(Boolean) : [];
+        let prefPrompt = '';
+        if (flavors.length) prefPrompt += '用户口味偏好：' + flavors.join('、') + '。';
+        const avoid = (Array.isArray(pp.avoid) ? pp.avoid : []).concat(pp.avoidCustom ? String(pp.avoidCustom).split(/[，,、\s]+/) : []);
+        const avoids = avoid.map(function (s) { return String(s).trim(); }).filter(Boolean);
+        if (avoids.length) prefPrompt += '请务必避开用户忌口的食材：' + avoids.join('、') + '（不要使用；如需要可给出替代食材）。';
+        if (pp.habit === 'quick') prefPrompt += '用户偏好快手菜，请控制在 15 分钟内可完成，步骤精简。';
+        if (prefPrompt) messages.push({ role: 'user', content: '偏好要求：' + prefPrompt });
       }
       if (evt) {
         var evtPrompt = '';
@@ -441,6 +459,25 @@ async function aiReverse(text, ings) {
       resultName: resultName,
       recipe: normalizePlanItem(obj.recipe),
       tip: typeof obj.tip === 'string' ? obj.tip.trim().slice(0, 200) : ''
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
+async function aiImprove(recipe, prefs) {
+  try {
+    const raw = await aiJson([
+      { role: 'system', content: IMPROVE_PROMPT },
+      { role: 'user', content: '原菜谱：' + JSON.stringify(recipe) + (prefs ? '\n用户偏好：' + JSON.stringify(prefs) : '') }
+    ], 2);
+    const obj = extractJson(raw);
+    if (!obj || typeof obj !== 'object') return null;
+    const n = normalizeRecipe(obj);
+    if (!n) return null;
+    return {
+      recipe: n,
+      why: typeof obj.why === 'string' ? obj.why.trim().slice(0, 200) : ''
     };
   } catch (e) {
     return null;
@@ -899,6 +936,15 @@ exports.main = async (rawEvent) => {
       return { success: true, data: res };
     }
 
+    // AI 优化建议：把黑暗/不常规菜谱改良成常规好吃
+    if (action === 'improve') {
+      const recipe = event.recipe;
+      if (!recipe || typeof recipe !== 'object' || !recipe.name) return { success: false, error: '缺少原菜谱' };
+      const res = await aiImprove(recipe, event.preferences);
+      if (!res) return { success: false, error: 'AI 生成失败，请稍后再试' };
+      return { success: true, data: res };
+    }
+
     // 默认动作：generate（生成菜谱 + 生存挑战打卡/积分）
     const ingredients = String((event && event.ingredients) || '').trim();
     if (!ingredients) {
@@ -911,7 +957,7 @@ exports.main = async (rawEvent) => {
     }
 
     const mode = (event.mode === 'normal' || event.mode === 'synth') ? event.mode : 'weird';
-    const generated = await generate(ingredients, style, mode, event.persona);
+    const generated = await generate(ingredients, style, mode, event.persona, event.preferences);
     const tag = guessTag(generated.recipe);
 
     const addRes = await db.collection('recipes').add({

@@ -15,6 +15,7 @@
     </header>
     <div class="account-bar">
       <button id="accountBtn" class="account-btn" type="button">👤 未登录</button>
+      <button id="prefBtn" class="pref-btn" type="button">🎚 口味偏好</button>
     </div>
 
     <section class="guide-section">
@@ -270,6 +271,7 @@
         <div class="shopping-tools">
           <button id="shopCopy" class="shop-tool-btn" type="button">📋 复制清单</button>
           <button id="shopExport" class="shop-tool-btn" type="button">📤 导出 .txt</button>
+          <button id="shopAccumBtn" class="shop-tool-btn" type="button">➕ 加入累积清单</button>
         </div>
         <div class="delivery-row">
           <span class="delivery-label">🧺 去外卖买菜：</span>
@@ -306,6 +308,9 @@
 
       <button id="posterBtn" class="poster-btn" type="button">生成朋友圈打卡海报 📸</button>
       <button id="shareBtn" class="share-btn" type="button">分享给好友</button>
+      <button id="improveBtn" class="improve-btn hidden" type="button">✨ AI 优化建议</button>
+      <button id="accumAddBtn" class="improve-btn hidden" type="button">➕ 加入累积购物清单</button>
+      <div id="improveBox" class="improve-box hidden"></div>
       <button id="challengeBtn" class="challenge-btn" type="button">🔥 甩锅给好友</button>
     </div>
 
@@ -323,7 +328,23 @@
       <p class="fav-sub">好菜存下来，下次直接看</p>
       <div id="favTabs" class="fav-tabs"></div>
       <div id="favList" class="fav-list"></div>
-    </section>    <section class="rank-section">
+    </section>
+    <section class="tool-card accum-card">
+      <div class="tool-head">
+        <span class="tool-emoji">🛒</span>
+        <div class="tool-text"><b>累积购物清单</b><p>多道菜需要买的辅料去重累计，超市一次购齐</p></div>
+      </div>
+      <div class="tool-body">
+        <div class="tool-actions">
+          <button id="accumCopy" class="tool-btn" type="button">📋 复制清单</button>
+          <button id="accumExport" class="tool-btn" type="button">📤 导出 .txt</button>
+          <button id="accumBuy" class="tool-btn primary" type="button">🧺 去外卖买菜</button>
+          <button id="accumClear" class="tool-btn" type="button">🗑 清空</button>
+        </div>
+        <div id="accumList" class="accum-list"></div>
+      </div>
+    </section>
+    <section class="rank-section">
       <h2 class="rank-title">🏛️ 剩菜博物馆</h2>
       <p class="rank-sub">全网最离谱菜谱大赏 · 按症状分类</p>
       <div id="rankTabs" class="rank-tabs"></div>
@@ -352,6 +373,10 @@
         <div class="kitchen-counter"><b id="kitchenIdx">1/1</b><span id="kitchenStepLabel">第 1 步</span></div>
         <p id="kitchenStep" class="kitchen-step"></p>
         <a id="kitchenVideo" class="kitchen-video hidden" href="#" target="_blank" rel="noopener">🎬 看视频参考</a>
+        <div id="kitchenTimerBox" class="kitchen-timer hidden">
+          <button id="kitchenTimerBtn" class="kitchen-timer-btn" type="button">⏱ 开始计时</button>
+          <b id="kitchenTimerDisp" class="kitchen-timer-disp"></b>
+        </div>
       </div>
       <div class="kitchen-actions">
         <button id="kitchenPrev" class="kitchen-btn" type="button">◀ 上一步</button>
@@ -406,6 +431,23 @@
         <span class="buy-p-emoji">🛒</span><span class="buy-p-name">京东到家</span><span class="buy-p-arrow">›</span>
       </a>
       <p class="buy-modal-tip">小提示：别忘了带上前面的「主厨采购清单」哦～</p>
+    </div>
+  </div>
+
+  <div id="prefModal" class="pref-modal hidden">
+    <div class="pref-backdrop"></div>
+    <div class="pref-card">
+      <button id="prefClose" class="pref-close" type="button" aria-label="关闭">×</button>
+      <b class="pref-title">🎚 口味偏好</b>
+      <p class="pref-sub">AI 会参考这些偏好出菜，本地匹配也会避开忌口</p>
+      <div class="pref-group"><b>口味</b><div id="prefFlavor" class="pref-chips"></div></div>
+      <div class="pref-group"><b>忌口（多选 + 自定义）</b><div id="prefAvoid" class="pref-chips"></div>
+        <input id="prefAvoidCustom" class="pref-input" maxlength="40" placeholder="自定义忌口，逗号分隔，如：芹菜、蘑菇"></div>
+      <div class="pref-group"><b>烹饪习惯</b><div id="prefHabit" class="pref-chips"></div></div>
+      <div class="pref-actions">
+        <button id="prefSave" class="pref-save" type="button">✅ 保存偏好</button>
+        <button id="prefReset" class="pref-reset" type="button">↺ 清空</button>
+      </div>
     </div>
   </div>
 

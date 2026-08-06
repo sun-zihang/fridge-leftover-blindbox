@@ -136,3 +136,49 @@ test('prettyTime 统一任意 time 格式（修 约NaN/重复分钟 bug）', () 
   assert.strictEqual(P.prettyTime(''), '');
   assert.strictEqual(P.prettyTime(null), '');
 });
+
+test('applyPrefs 口味偏好过滤与加权', () => {
+  const pool = [
+    { name: '香菜牛肉', ingNames: ['牛肉', '香菜'], steps: ['洗', '切', '腌', '炒', '炖', '收汁'], ings: ['牛肉', '香菜'] },
+    { name: '麻婆豆腐', ingNames: ['豆腐', '辣椒'], steps: ['煮', '煮', '煮', '煮'], ings: ['豆腐', '辣椒'] },
+    { name: '糖醋里脊', ingNames: ['里脊', '糖', '醋'], steps: ['炸', '炸'], ings: ['里脊', '糖', '醋'] },
+    { name: '清蒸鲈鱼', ingNames: ['鲈鱼'], steps: ['蒸'], ings: ['鲈鱼'] }
+  ];
+  const noCil = P.applyPrefs(pool, { avoid: ['香菜'] });
+  assert.ok(noCil.every(r => r.name !== '香菜牛肉'), '忌口应过滤香菜牛肉');
+  assert.strictEqual(noCil.length, 3);
+  const spicy = P.applyPrefs(pool, { flavor: ['辣'] });
+  assert.strictEqual(spicy[0].name, '麻婆豆腐', '喜辣应把辣菜排前');
+  const quick = P.applyPrefs(pool, { habit: 'quick' });
+  assert.ok(quick[0].steps.length <= 3, '快手应把步骤少的排前: ' + quick[0].name);
+  assert.strictEqual(P.applyPrefs(pool, {}).length, 4, '空偏好原样');
+  assert.ok(P.applyPrefs([{ name: '香菜', ingNames: ['香菜'] }], { avoid: ['香菜'] }).length === 1, '全被过滤时回退不过滤');
+});
+
+test('improveLocal 改良方向文案', () => {
+  const dark = P.improveLocal({ name: '可乐泡面洋葱汉堡', ings: ['可乐', '泡面', '洋葱'] });
+  assert.ok(dark.length >= 2, '黑暗组合应给出多条建议');
+  assert.ok(dark.some(t => t.indexOf('可乐') >= 0 || t.indexOf('泡面') >= 0), '建议应命中关键食材');
+  const normal = P.improveLocal({ name: '清蒸鲈鱼', ings: ['鲈鱼'] });
+  assert.ok(normal.length >= 1 && normal[0].indexOf('整体不错') >= 0, '无命中给通用建议');
+});
+
+test('accumulateShopping 累积去重计数', () => {
+  const out = P.accumulateShopping([{ name: '生抽', count: 2 }], { shoppingList: ['生抽', '料酒', '白糖'] });
+  const soy = out.find(x => x.name === '生抽');
+  assert.strictEqual(soy.count, 3);
+  assert.strictEqual(out.length, 3);
+  const empty = P.accumulateShopping([], { shoppingList: [] });
+  assert.strictEqual(empty.length, 0);
+  const nullRecipe = P.accumulateShopping([{ name: '盐', count: 1 }], null);
+  assert.strictEqual(nullRecipe.length, 1);
+});
+
+test('stepSeconds 步骤时长提取（含中文数字）', () => {
+  assert.strictEqual(P.stepSeconds('焖煮10分钟'), 600);
+  assert.strictEqual(P.stepSeconds('腌制 15 分钟'), 900);
+  assert.strictEqual(P.stepSeconds('浸泡十分钟'), 600);
+  assert.strictEqual(P.stepSeconds('炖 1 小时'), 3600);
+  assert.strictEqual(P.stepSeconds('翻炒均匀'), 0);
+  assert.strictEqual(P.stepSeconds(''), 0);
+});
