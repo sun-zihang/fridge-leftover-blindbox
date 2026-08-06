@@ -125,3 +125,14 @@ test('videoFor 无视频菜谱也能补全 B 站视频链接', () => {
   assert.strictEqual(P.videoFor(''), null);
   assert.strictEqual(P.videoFor(null), null);
 });
+
+test('prettyTime 统一任意 time 格式（修 约NaN/重复分钟 bug）', () => {
+  assert.strictEqual(P.prettyTime('约 20 分钟'), '约 20 分钟');
+  assert.strictEqual(P.prettyTime('25分钟'), '约 25 分钟');
+  assert.strictEqual(P.prettyTime('40 分钟就能端上餐桌'), '约 40 分钟');
+  assert.strictEqual(P.prettyTime(5), '约 5 分钟');
+  assert.strictEqual(P.prettyTime('1 小时'), '约 1 小时');
+  assert.strictEqual(P.prettyTime('约30分钟'), '约 30 分钟');
+  assert.strictEqual(P.prettyTime(''), '');
+  assert.strictEqual(P.prettyTime(null), '');
+});

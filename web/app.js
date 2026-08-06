@@ -1741,7 +1741,7 @@ recognition.interimResults = true;
     dn.textContent = recipe.name;
     var dm = document.createElement('div');
     dm.className = 'detail-meta';
-    dm.textContent = [recipe.scene, recipe.time ? '⏱️ 约 ' + recipe.time + ' 分钟' : '', recipe.desc].filter(Boolean).join(' · ');
+    dm.textContent = [recipe.scene, recipe.time ? '⏱️ ' + prettyTime(recipe.time) : '', recipe.desc].filter(Boolean).join(' · ');
     head.appendChild(dn);
     head.appendChild(dm);
     var lb = document.createElement('span');
@@ -1750,9 +1750,10 @@ recognition.interimResults = true;
     head.appendChild(lb);
     var info = document.createElement('div');
     info.className = 'detail-info';
-    var mins = recipe.time ? parseInt(recipe.time, 10) : ((recipe.steps || []).length * 6 + 10);
+    var mins = recipe.time ? prettyTime(recipe.time) : ((recipe.steps || []).length * 6 + 10);
     var diff = (recipe.steps || []).length <= 3 ? '简单' : ((recipe.steps || []).length <= 5 ? '中等' : '有挑战');
-    info.textContent = '⏱️ 约 ' + mins + ' 分钟 · 🍳 难度：' + diff + ' · 👥 2 人份';
+    var timePart = recipe.time ? ('⏱️ ' + prettyTime(recipe.time)) : ('⏱️ 约 ' + mins + ' 分钟');
+    info.textContent = timePart + ' · 🍳 难度：' + diff + ' · 👥 2 人份';
     head.appendChild(info);
     els.detailBody.appendChild(head);
 
@@ -2944,6 +2945,9 @@ recognition.interimResults = true;
       return dataUrl;
     } catch (e) { return null; }
   }
+  function prettyTime(t) {
+    return (PRACTICAL && PRACTICAL.prettyTime) ? PRACTICAL.prettyTime(t) : (t === null || t === undefined || t === '' ? '' : String(t));
+  }
   function prettyIng(s) {
     return (PRACTICAL && PRACTICAL.normalizeAmount) ? PRACTICAL.normalizeAmount(s) : s;
   }
@@ -3029,7 +3033,7 @@ recognition.interimResults = true;
       head.appendChild(el('span', 'week-day-date', it.dateLabel || ''));
       card.appendChild(head);
       card.appendChild(el('div', 'week-day-name', r.name || '未命名'));
-      var meta = [r.time ? '⏱ ' + r.time : '', r.ings && r.ings.length ? '食材 ' + r.ings.length + ' 样' : ''].filter(Boolean).join(' · ');
+      var meta = [r.time ? '⏱ ' + prettyTime(r.time) : '', r.ings && r.ings.length ? '食材 ' + r.ings.length + ' 样' : ''].filter(Boolean).join(' · ');
       if (meta) card.appendChild(el('div', 'week-day-meta', meta));
       if (it.lunchbox) card.appendChild(el('span', 'lunchbox-tag ' + (it.lunchbox.cls || ''), it.lunchbox.label));
       card.addEventListener('click', function () { renderDetail(r); els.detailModal.classList.remove('hidden'); });

@@ -379,6 +379,21 @@
   }
 
 
+  /* ================= 用时清洗：任意 time 格式统一为「约 X 分钟/小时」 ================= */
+  function prettyTime(t) {
+    if (t === null || t === undefined || t === '') return '';
+    var s = String(t).trim();
+    if (!s) return '';
+    var m = s.match(/\d+(\.\d+)?/);
+    var n = m ? parseFloat(m[0]) : NaN;
+    if (!isNaN(n) && n > 0) {
+      if (/小时/.test(s)) return '约 ' + n + ' 小时';
+      return '约 ' + n + ' 分钟';
+    }
+    return s;
+  }
+
+
   return {
     lunchboxTag: lunchboxTag,
     buildWeekPlanLocal: buildWeekPlanLocal,
@@ -386,6 +401,7 @@
     buildMealPrepLocal: buildMealPrepLocal,
     reverseSearchLocal: reverseSearchLocal,
     normalizeAmount: normalizeAmount,
-    videoFor: videoFor
+    videoFor: videoFor,
+    prettyTime: prettyTime
   };
 });
