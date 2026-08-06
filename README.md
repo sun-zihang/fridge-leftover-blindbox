@@ -46,9 +46,12 @@
 │   ├── iddzzRecipes.js            # iddzz 菜谱库（145 道，含 B 站演示视频）
 │   ├── howToCookRecipes.js        # HowToCook 菜谱库（298 道，Unlicense）
 │   ├── practical.js              # 厨房管家纯逻辑（周计划/备菜/反向搜索/带饭标签）
-│   └── app.js
+│   ├── app.js
+│   └── 5ba02e89310da31b8a84990776a2d5c5.txt  # 微信域名校验文件（勿删）
+├── scripts/
+│   └── importHowToCook.js        # 开发期：HowToCook 菜谱导入（node scripts/importHowToCook.js）
 ├── cloudfunctions/
-│   └── generateRecipe/         # AI 生成菜谱云函数（generate+persona/synth / rate / listRank / dailyChallenge / vote / recognizeImage）
+│   └── generateRecipe/         # AI 生成菜谱云函数（generate+persona/synth / rate / listRank / dailyChallenge / vote / recognizeImage / weekPlan / mealPrep / reverseSearch）
 │       ├── index.js
 │       ├── recipe.js           # 纯逻辑（JSON 提取/校验/兜底），可本地单测
 │       ├── duel.js             # 双人对局纯状态机（lobby/swap/cook/judge/done）
@@ -56,9 +59,15 @@
 │       ├── howToCookRecipes.js  # HowToCook 菜谱库（298 道，与 web 同步）
 │       ├── config.json
 │       ├── package.json
-│       └── test/recipe.test.js  # 单元测试（node --test）
-│       └── test/duel.test.js    # 对局状态机单测
-│       └── test/howToCookRecipes.test.js  # 菜谱库导入/匹配单测
+│       └── test/               # 单元测试（node --test，共 48 条）
+│           ├── recipe.test.js
+│           ├── duel.test.js
+│           ├── howToCookRecipes.test.js
+│           └── practical.test.js
+├── miniprogram/                # 微信小程序版（可选，桥接网页版 a455 环境，见下文）
+├── _acl.js / _mkRoom.js        # 开发期脚本：rooms ACL 初始化 / 创建测试房间
+├── cloudbaserc.json            # tcb CLI 配置
+├── project.config.json         # 小程序项目配置
 └── PRD.md                      # 产品需求文档
 ```
 
